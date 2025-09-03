@@ -1,7 +1,0 @@
-[package]
-org = "dinika"
-name = "register_b2b_customer"
-version = "0.1.0"
-
-[build-options]
-sticky = true
