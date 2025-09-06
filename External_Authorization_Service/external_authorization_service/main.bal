@@ -1,0 +1,102 @@
+import ballerina/http;
+import ballerina/log;
+
+// HTTP service for handling token requests
+service /token on new http:Listener(servicePort) {
+    
+    // POST resource to handle token requests
+    resource function post .(http:Caller caller, http:Request req, @http:Payload TokenRequest tokenRequest) returns error? {
+        
+        // Print the whole request payload before processing
+        string requestPayload = tokenRequest.toJsonString();
+        log:printInfo("Complete request payload: " + requestPayload);
+        
+        log:printInfo("Received token request", actionType = tokenRequest.actionType);
+        
+        // Process the token request
+        json response = processTokenRequest(tokenRequest);
+        
+        // Send response back to client
+        check caller->respond(response);
+    }
+}
+
+// Function to process the token request
+function processTokenRequest(TokenRequest tokenRequest) returns json {
+    
+    // Log key information from the request
+    log:printInfo("Processing token request", 
+        actionType = tokenRequest.actionType,
+        clientId = tokenRequest.event.request.clientId,
+        organization = tokenRequest.event.organization.name,
+        organizationId = tokenRequest.event.organization.id,
+        userId = tokenRequest.event.user.id,
+        userOrg = tokenRequest.event.user.organization
+    );
+    
+    // Process based on action type
+    match tokenRequest.actionType {
+        "PRE_ISSUE_ACCESS_TOKEN" => {
+            return handlePreIssueAccessToken(tokenRequest);
+        }
+        _ => {
+            TokenResponse errorResponse = {
+                status: "ERROR",
+                message: "Unsupported action type: " + tokenRequest.actionType,
+                actionType: tokenRequest.actionType
+            };
+            return errorResponse.toJson();
+        }
+    }
+}
+
+// Handle PRE_ISSUE_ACCESS_TOKEN action
+function handlePreIssueAccessToken(TokenRequest tokenRequest) returns json {
+    
+    // Access token information
+    AccessToken accessToken = tokenRequest.event.accessToken;
+    log:printInfo("Access token details", 
+        tokenType = accessToken.tokenType,
+        scopesCount = accessToken.scopes.length(),
+        claimsCount = accessToken.claims.length()
+    );
+    
+    // Check if allowed operations include "add" with "/accessToken/scopes/" in paths
+    boolean scopeAddAllowed = false;
+    foreach AllowedOperation operation in tokenRequest.allowedOperations {
+        log:printInfo("Allowed operation", op = operation.op, pathsCount = operation.paths.length());
+        
+        if operation.op == "add" {
+            foreach string path in operation.paths {
+                if path == "/accessToken/scopes/" {
+                    scopeAddAllowed = true;
+                    break;
+                }
+            }
+        }
+        if scopeAddAllowed {
+            break;
+        }
+    }
+    
+    // Always return SUCCESS status with 200 OK
+    ScopeAddResponse response = {
+        actionStatus: "SUCCESS"
+    };
+    
+    if scopeAddAllowed {
+        // Include operations if scope add is allowed
+        response.operations = [
+            {
+                op: "add",
+                path: "/accessToken/scopes/-",
+                value: "custom-scope-1"
+            }
+        ];
+    } else {
+        // Log that scope add operation is not allowed
+        log:printInfo("scope add operation not allowed");
+    }
+    
+    return response.toJson();
+}

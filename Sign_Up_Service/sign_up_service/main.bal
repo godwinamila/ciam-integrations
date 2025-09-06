@@ -1,5 +1,5 @@
 import ballerina/http;
-import ballerina/io;
+import ballerina/log;
 
 // HTTP service for business signup
 service /signup on new http:Listener(8081) {
@@ -14,6 +14,7 @@ service /signup on new http:Listener(8081) {
         string? countryValue = payload["http://wso2.org/claims/country"] is string ? <string>payload["http://wso2.org/claims/country"] : ();
         string? marketingConsentValue = payload["http://wso2.org/claims/marketing_consent"] is string ? <string>payload["http://wso2.org/claims/marketing_consent"] : ();
         string? emailAddressValue = payload["http://wso2.org/claims/emailaddress"] is string ? <string>payload["http://wso2.org/claims/emailaddress"] : ();
+        string? password = payload["password"] is string ? <string>payload["password"] : ();
         
         BusinessInfo businessInfo = {
             givenName: givenNameValue,
@@ -23,26 +24,58 @@ service /signup on new http:Listener(8081) {
             marketingConsent: marketingConsentValue,
             institution: payload?.institution,
             registeredBusinessNumber: payload?.registeredBusinessNumber,
-            emailAddress: emailAddressValue
+            emailAddress: emailAddressValue,
+            password: password
         };
         
-        // Log the business information using io:println
-        io:println("=== Business Signup Information ===");
-        io:println("Given Name: ", businessInfo.givenName ?: "Not provided");
-        io:println("Last Name: ", businessInfo.lastName ?: "Not provided");
-        io:println("Email Address: ", businessInfo.emailAddress ?: "Not provided");
-        io:println("Mobile: ", businessInfo.mobile ?: "Not provided");
-        io:println("Country: ", businessInfo.country ?: "Not provided");
-        io:println("Institution: ", businessInfo.institution ?: "Not provided");
-        io:println("Registered Business Number: ", businessInfo.registeredBusinessNumber ?: "Not provided");
-        io:println("Marketing Consent: ", businessInfo.marketingConsent ?: "Not provided");
-        io:println("===================================");
+        // Log the business information using log:printInfo
+        log:printInfo("=== Business Signup Information ===");
+        log:printInfo("Given Name: " + (businessInfo.givenName ?: "Not provided"));
+        log:printInfo("Last Name: " + (businessInfo.lastName ?: "Not provided"));
+        log:printInfo("Email Address: " + (businessInfo.emailAddress ?: "Not provided"));
+        log:printInfo("Mobile: " + (businessInfo.mobile ?: "Not provided"));
+        log:printInfo("Country: " + (businessInfo.country ?: "Not provided"));
+        log:printInfo("Institution: " + (businessInfo.institution ?: "Not provided"));
+        log:printInfo("Registered Business Number: " + (businessInfo.registeredBusinessNumber ?: "Not provided"));
+        log:printInfo("Marketing Consent: " + (businessInfo.marketingConsent ?: "Not provided"));
+        log:printInfo("===================================");
         
+        // Handle organization setup
+        OrganizationInfo? organizationInfo = ();
+        if businessInfo.institution is string {
+            string institutionName = <string>businessInfo.institution;
+            OrganizationInfo?|error orgResult = handleOrganizationSetup(institutionName);
+            
+            if orgResult is error {
+                log:printInfo("Error setting up organization: " + orgResult.message());
+                return <http:BadRequest>{
+                    body: {
+                        "error": "Failed to setup organization",
+                        "message": orgResult.message()
+                    }
+                };
+            }
+            organizationInfo = orgResult;
+        }
+        
+        // Handle user creation, group assignment, and sharing only if organization info is available
+        if organizationInfo is OrganizationInfo {
+            error? userCreationResult = handleUserCreationFlow(businessInfo, organizationInfo);
+            if userCreationResult is error {
+                log:printInfo("Error in user creation flow: " + userCreationResult.message());
+                return <http:BadRequest>{
+                    body: {
+                        "error": "Failed to complete user creation flow",
+                        "message": userCreationResult.message()
+                    }
+                };
+            }
+        }
+
         // Create response
         BusinessSignupResponse response = {
             status: "success",
-            message: "Business signup information received successfully",
-            businessInfo: businessInfo
+            message: "Business user signup successfull"
         };
         
         return response;
@@ -52,9 +85,9 @@ service /signup on new http:Listener(8081) {
     resource function get businessData(string businessName) returns BusinessNameResponse|http:BadRequest {
         
         // Log the received business name
-        io:println("=== Business Name Request ===");
-        io:println("Business Name: ", businessName);
-        io:println("=============================");
+        log:printInfo("=== Business Name Request ===");
+        log:printInfo("Business Name: " + businessName);
+        log:printInfo("=============================");
         
         // Create response with the business name
         BusinessNameResponse response = {

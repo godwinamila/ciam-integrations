@@ -1,33 +1,9 @@
 // Business signup request payload structure
 public type BusinessSignupRequest record {|
-    string isSaaSApp?;
-    string usernameInput?;
     string username?;
     string password?;
-    string previous_step?;
-    string client_id?;
-    string code_challenge?;
-    string code_challenge_method?;
-    string commonAuthCallerPath?;
-    string forceAuth?;
-    string passiveAuth?;
-    string redirect_uri?;
-    string response_mode?;
-    string response_type?;
-    string scope?;
-    string state?;
-    string sessionDataKey?;
-    string relyingParty?;
-    string 'type?;
-    string sp?;
-    string spId?;
-    string authenticators?;
-    string callback?;
-    string isSelfRegistrationWithVerification?;
-    string userType?;
     string institution?;
     string registeredBusinessNumber?;
-
     // Allow additional fields including the claim fields with special characters
     anydata...;
 |};
@@ -40,15 +16,15 @@ public type BusinessInfo record {|
     string? country;
     string? marketingConsent;
     string? institution;
-    string? registeredBusinessNumber;
     string? emailAddress;
+    string? password;
+    string? registeredBusinessNumber;
 |};
 
 // Response structure
 public type BusinessSignupResponse record {|
     string status;
     string message;
-    BusinessInfo businessInfo;
 |};
 
 // Business name response structure
@@ -56,4 +32,132 @@ public type BusinessNameResponse record {|
     string status;
     string message;
     string businessName;
+|};
+
+// Asgardeo Organization API types
+public type OrganizationAttribute record {|
+    string key;
+    string value;
+|};
+
+public type Organization record {|
+    string id;
+    string name;
+    OrganizationAttribute[] attributes?;
+|};
+
+public type OrganizationsResponse record {|
+    Organization[] organizations?;
+    anydata...;
+|};
+
+public type OrganizationCreateRequest record {|
+    string name;
+    OrganizationAttribute[] attributes;
+|};
+
+public type OrganizationCreateResponse record {|
+    string id;
+    string name;
+    OrganizationAttribute[] attributes?;
+    anydata...;
+|};
+
+public type UserCreateResponse record {|
+    string id;
+    string userName;
+    anydata...;
+|};
+
+public type OrganizationInfo record {|
+    string id;
+    boolean isExistingOrg;
+    string orgAdminGroupId;
+    string accessToken;
+|};
+
+// Token switching types
+public type TokenSwitchResponse record {|
+    string access_token;
+    string scope;
+    string token_type;
+    int expires_in;
+|};
+
+// SCIM2 Role types
+public type RolePermission record {|
+    string value;
+|};
+
+public type RoleAudience record {|
+    string 'type;
+    string value;
+    string display?;
+|};
+
+public type RoleCreateRequest record {|
+    RoleAudience audience;
+    string displayName;
+    RolePermission[] permissions;
+    string[] schemas;
+|};
+
+public type RoleCreateResponse record {|
+    string id;
+    string displayName;
+    RoleAudience audience;
+    anydata...;
+|};
+
+// SCIM2 Group types
+public type GroupCreateRequest record {|
+    string displayName;
+    anydata[] members;
+    string[] schemas;
+|};
+
+public type Group record {|
+    string displayName;
+    string id;
+    anydata...;
+|};
+
+public type GroupGetResponse record {|
+    int totalResults;
+    Group[] Resources;
+    anydata...;
+|};
+
+public type PatchResponse record {|
+    string displayName;
+    string id;
+    anydata...;
+|};
+
+// Application types
+public type Application record {|
+    string id;
+    string name;
+    anydata...;
+|};
+
+public type ApplicationsResponse record {|
+    int totalResults;
+    int count;
+    Application[] applications;
+    anydata...;
+|};
+
+// Console app role types
+public type ConsoleAppRole record {|
+    RoleAudience audience;
+    string displayName;
+    string id;
+    anydata...;
+|};
+
+public type ConsoleAppRolesResponse record {|
+    int totalResults;
+    ConsoleAppRole[] Resources;
+    anydata...;
 |};
