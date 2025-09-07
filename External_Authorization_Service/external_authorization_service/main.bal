@@ -103,38 +103,6 @@ function processTokenRequest(json tokenRequest) returns json {
 // Handle PRE_ISSUE_ACCESS_TOKEN action
 function handlePreIssueAccessToken(json tokenRequest) returns json {
     
-    // Extract access token information from JSON
-    json|error eventResult = tokenRequest.event;
-    if eventResult is json && eventResult is map<json> {
-        json|error accessTokenResult = eventResult.accessToken;
-        if accessTokenResult is json && accessTokenResult is map<json> {
-            json|error tokenTypeResult = accessTokenResult.tokenType;
-            json|error scopesResult = accessTokenResult.scopes;
-            json|error claimsResult = accessTokenResult.claims;
-            
-            string tokenType = "";
-            if tokenTypeResult is json {
-                tokenType = tokenTypeResult is string ? tokenTypeResult : "";
-            }
-            
-            int scopesCount = 0;
-            if scopesResult is json && scopesResult is json[] {
-                scopesCount = scopesResult.length();
-            }
-            
-            int claimsCount = 0;
-            if claimsResult is json && claimsResult is json[] {
-                claimsCount = claimsResult.length();
-            }
-            
-            log:printInfo("Access token details", 
-                tokenType = tokenType,
-                scopesCount = scopesCount,
-                claimsCount = claimsCount
-            );
-        }
-    }
-    
     // Check if allowed operations include "add" with "/accessToken/scopes/" in paths
     boolean scopeAddAllowed = false;
     json|error allowedOperationsResult = tokenRequest.allowedOperations;
@@ -179,6 +147,7 @@ function handlePreIssueAccessToken(json tokenRequest) returns json {
     };
     
     if scopeAddAllowed {
+        log:printInfo("scope add operation is allowed");
         // Include operations if scope add is allowed
         response.operations = [
             {
@@ -191,6 +160,6 @@ function handlePreIssueAccessToken(json tokenRequest) returns json {
         // Log that scope add operation is not allowed
         log:printInfo("scope add operation not allowed");
     }
-    
+    log:printInfo("Sending back response " + response.toJson().toString());
     return response.toJson();
 }
