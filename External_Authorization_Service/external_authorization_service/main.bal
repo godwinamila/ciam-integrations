@@ -2,10 +2,10 @@ import ballerina/http;
 import ballerina/log;
 
 // HTTP service for handling token requests
-service /token on new http:Listener(servicePort) {
+service / on new http:Listener(8089) {
     
     // POST resource to handle token requests
-    resource function post .(http:Caller caller, http:Request req, @http:Payload TokenRequest tokenRequest) returns error? {
+    resource function post token(http:Caller caller, http:Request req, @http:Payload TokenRequest tokenRequest) returns error? {
         
         // Print the whole request payload before processing
         string requestPayload = tokenRequest.toJsonString();
