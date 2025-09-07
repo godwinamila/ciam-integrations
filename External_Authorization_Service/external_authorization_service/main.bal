@@ -160,6 +160,10 @@ function handlePreIssueAccessToken(json tokenRequest) returns json {
         // Log that scope add operation is not allowed
         log:printInfo("scope add operation not allowed");
     }
-    log:printInfo("Sending back response " + response.toJson().toString());
+
+    // Print the whole response payload before returning
+    string responsePayload = response.toJsonString();
+    log:printInfo("Complete response payload: " + responsePayload);
+
     return response.toJson();
 }
