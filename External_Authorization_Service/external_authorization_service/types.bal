@@ -6,15 +6,15 @@ public type TokenRequest record {
     AllowedOperation[] allowedOperations;
 };
 
-public type Event record {
+public type Event record {|
     Request request;
     Tenant tenant;
     Organization organization;
     User user;
     UserStore userStore;
     AccessToken accessToken;
-    RefreshToken refreshToken;
-};
+    anydata...;
+|};
 
 public type Request record {
     map<string[]> additionalHeaders;
@@ -46,10 +46,6 @@ public type AccessToken record {
     string tokenType;
     string[] scopes;
     Claim[] claims;
-};
-
-public type RefreshToken record {
-    map<Claim[]> claims;
 };
 
 public type Claim record {
