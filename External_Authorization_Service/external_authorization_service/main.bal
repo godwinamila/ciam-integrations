@@ -28,8 +28,8 @@ function processTokenRequest(TokenRequest tokenRequest) returns ErrorResponse|To
         clientId = tokenRequest.event.request.clientId,
         organization = tokenRequest.event.organization.name,
         organizationId = tokenRequest.event.organization.id,
-        userId = tokenRequest.event.user.id,
-        userOrganizationName = tokenRequest.event.user.organization.name
+        userId = tokenRequest.event.user?.id,
+        userOrganizationName = tokenRequest.event.user?.organization?.name
     );
     
     match tokenRequest.actionType {

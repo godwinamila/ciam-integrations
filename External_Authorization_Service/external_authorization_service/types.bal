@@ -44,9 +44,9 @@ public type TokenRequest record {|
 
 public type Event record {|
     Request request;
-    Tenant tenant;
+    Tenant tenant?;
     Organization organization;
-    User user;
+    User user?;
     AccessToken accessToken;
     anydata...;
 |};
@@ -65,7 +65,7 @@ public type Tenant record {
 public type AccessToken record {|
     string tokenType;
     string[] scopes;
-    Claim[] claims;
+    Claim[] claims?;
     anydata...;
 |};
 public type Claim record {
