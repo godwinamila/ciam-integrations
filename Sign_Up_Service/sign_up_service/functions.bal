@@ -1,6 +1,7 @@
 import ballerina/log;
 import ballerina/lang.regexp as regexp;
 import ballerina/lang.value;
+import ballerina/lang.runtime;
 
 // Function to normalize organization name
 function normalizeOrganizationName(string businessName) returns string {
@@ -62,6 +63,40 @@ function switchToOrganizationToken(string organizationId) returns string|error {
     log:printDebug("API Response - switchToOrganizationToken: " + value:toJsonString(response));
     log:printInfo("Successfully switched to organization token for org: " + organizationId);
     return response.access_token;
+}
+
+// Function to wait for DEFAULT userstore to be created and enabled
+function waitForDefaultUserstore(string organizationId, string rootAccessToken) returns error? {
+    log:printInfo("Waiting for DEFAULT userstore to be created and enabled for organization: " + organizationId);
+    
+    string endpoint = string `/o/api/server/v1/userstores`;
+    
+    map<string|string[]> headers = {
+        "Authorization": string `Bearer ${rootAccessToken}`,
+        "Accept": "application/json"
+    };
+
+    while true {
+        Userstore[]|error response = asgardeoClient->get(endpoint, headers = headers);
+        
+        if response is error {
+            log:printError(string`Error checking userstores: - ${response.detail().toString()}`);
+            return response;
+        }
+
+        log:printDebug("API Response - waitForDefaultUserstore: " + value:toJsonString(response));
+        log:printInfo("API Response - waitForDefaultUserstore: " + value:toJsonString(response));
+        // Check if DEFAULT userstore exists and is enabled
+        foreach Userstore userstore in response {
+            if userstore.name == "DEFAULT" && userstore.enabled {
+                log:printInfo("DEFAULT userstore found and enabled for organization: " + organizationId);
+                return ();
+            }
+        }
+        
+        log:printInfo("DEFAULT userstore not yet available or not enabled. Waiting 5 seconds before retry...");
+        runtime:sleep(5);
+    }
 }
 
 // Function to get Console application ID
@@ -674,6 +709,12 @@ function handleOrganizationSetup(string? businessName) returns OrganizationInfo?
         orgId = existingOrg.id;
     }
 
+    // Get root access token for userstore checking
+    string|error rootAccessToken = getCurrentAccessToken();
+    if rootAccessToken is error {
+        return rootAccessToken;
+    }
+
     // Organization doesn't exist, create new one with normalized name
     if (!createUserInExistingOrg) {
         string organizationName = normalizeOrganizationName(businessName);
@@ -685,25 +726,30 @@ function handleOrganizationSetup(string? businessName) returns OrganizationInfo?
             return newOrg;
         }
         orgId = newOrg.id;
+
+        // Wait for DEFAULT userstore to be created and enabled
+        error? userstoreWaitResult = waitForDefaultUserstore(orgId, rootAccessToken);
+        if userstoreWaitResult is error {
+            return userstoreWaitResult;
+        }
     }
     
-
     // Switch to organization token
     string|error orgToken = switchToOrganizationToken(orgId);
     if orgToken is error {
         return orgToken;
     }
 
-    string adminRoleId = "";
+    //string adminRoleId = "";
     string adminGroupId = "";
 
     // If it's a new org, create org-admin role and org-admins-group. 
     if (!createUserInExistingOrg) {
-        string|error roleId = createOrgAdminRole(orgId, orgToken);
-        if roleId is error {
-            return roleId;
-        }
-        adminRoleId = roleId;
+        // string|error roleId = createOrgAdminRole(orgId, orgToken);
+        // if roleId is error {
+        //     return roleId;
+        // }
+        // adminRoleId = roleId;
 
         string|error groupId = createOrgAdminsGroup(orgToken);
         if groupId is error {
@@ -712,10 +758,10 @@ function handleOrganizationSetup(string? businessName) returns OrganizationInfo?
         adminGroupId = groupId;
 
         // Assign role to group
-        error? assignmentResult = assignRoleToGroup(adminRoleId, adminGroupId, orgToken);
-        if assignmentResult is error {
-            return assignmentResult;
-        }
+        // error? assignmentResult = assignRoleToGroup(adminRoleId, adminGroupId, orgToken);
+        // if assignmentResult is error {
+        //     return assignmentResult;
+        // }
 
         // Get Console application ID
         string|error consoleAppId = getConsoleApplicationId(orgToken);

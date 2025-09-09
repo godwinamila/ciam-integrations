@@ -161,3 +161,14 @@ public type ConsoleAppRolesResponse record {|
     ConsoleAppRole[] Resources;
     anydata...;
 |};
+
+// Userstore types
+public type Userstore record {|
+    string id;
+    string name;
+    boolean enabled;
+    string description;
+    boolean isLocal;
+    string self;
+    string typeName;
+|};

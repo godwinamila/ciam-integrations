@@ -5,16 +5,17 @@ import ballerina/log;
 service /signup on new http:Listener(8081) {
     
     // POST endpoint for business signup
-    resource function post createUser(BusinessSignupRequest payload) returns BusinessSignupResponse|http:BadRequest {
+    resource function post createUser(BusinessSignupRequest payload) returns http:Found|http:BadRequest {
         
         // Extract key business information from the payload with proper type casting
         string? givenNameValue = payload["http://wso2.org/claims/givenname"] is string ? <string>payload["http://wso2.org/claims/givenname"] : ();
         string? lastNameValue = payload["http://wso2.org/claims/lastname"] is string ? <string>payload["http://wso2.org/claims/lastname"] : ();
         string? mobileValue = payload["http://wso2.org/claims/mobile"] is string ? <string>payload["http://wso2.org/claims/mobile"] : ();
         string? countryValue = payload["http://wso2.org/claims/country"] is string ? <string>payload["http://wso2.org/claims/country"] : ();
-        string? marketingConsentValue = payload["http://wso2.org/claims/marketing_consent"] is string ? <string>payload["http://wso2.org/claims/marketing_consent"] : ();
+        string? marketingConsentValue = payload["marketingConsent"] is string ? <string>payload["marketingConsent"] : ();
         string? emailAddressValue = payload["http://wso2.org/claims/emailaddress"] is string ? <string>payload["http://wso2.org/claims/emailaddress"] : ();
         string? password = payload["password"] is string ? <string>payload["password"] : ();
+        string? signInURL = payload["signInURL"] is string ? <string>payload["signInURL"] : ();
         
         BusinessInfo businessInfo = {
             givenName: givenNameValue,
@@ -38,6 +39,7 @@ service /signup on new http:Listener(8081) {
         log:printInfo("Institution: " + (businessInfo.institution ?: "Not provided"));
         log:printInfo("Registered Business Number: " + (businessInfo.registeredBusinessNumber ?: "Not provided"));
         log:printInfo("Marketing Consent: " + (businessInfo.marketingConsent ?: "Not provided"));
+        log:printInfo("signInURL: " + (signInURL ?: "Not provided"));
         log:printInfo("===================================");
         
         // Handle organization setup
@@ -72,13 +74,16 @@ service /signup on new http:Listener(8081) {
             }
         }
 
-        // Create response
-        BusinessSignupResponse response = {
-            status: "success",
-            message: "Business user signup successfull"
-        };
+        // Determine redirect URL - use signInURL from request if provided, otherwise use configured URL
+        string redirectUrl = signInURL ?: successRedirectUrl;
         
-        return response;
+        // User creation flow completed successfully, redirect to determined URL
+        log:printInfo("User creation flow completed successfully. Redirecting to: " + redirectUrl);
+        return <http:Found>{
+            headers: {
+                "location": redirectUrl
+            }
+        };
     }
 
     // GET endpoint that accepts businessName as query parameter
