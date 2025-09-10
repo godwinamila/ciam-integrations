@@ -16,3 +16,10 @@ configurable string successRedirectUrl = "https://example.com/success";
 final http:Client asgardeoClient = check new (asgardeoBaseUrl, {
     timeout: 30
 });
+
+// Salesforce Configuration
+configurable string salesforceBaseUrl = ?;
+configurable string salesforceClientId = ?;
+configurable string salesforceClientSecret = ?;
+configurable string salesforceRefreshUrl = ?;
+configurable string salesforceRefreshToken = ?;

@@ -28,10 +28,9 @@ public type BusinessSignupResponse record {|
 |};
 
 // Business name response structure
-public type BusinessNameResponse record {|
-    string status;
-    string message;
+public type BusinessDataResponse record {|
     string businessName;
+    string registrationNo;
 |};
 
 // Asgardeo Organization API types
@@ -171,4 +170,17 @@ public type Userstore record {|
     boolean isLocal;
     string self;
     string typeName;
+|};
+
+// Salesforce Account record type
+public type SalesforceAccount record {|
+    string AccountNumber;
+    anydata...;
+|};
+
+// Salesforce query response structure
+public type SalesforceQueryResponse record {|
+    int totalSize;
+    boolean done;
+    SalesforceAccount[] records;
 |};

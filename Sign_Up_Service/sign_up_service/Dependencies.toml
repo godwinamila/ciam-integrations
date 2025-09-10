@@ -149,7 +149,23 @@ dependencies = [
 
 [[package]]
 org = "ballerina"
+name = "lang.boolean"
+version = "0.0.0"
+dependencies = [
+	{org = "ballerina", name = "jballerina.java"}
+]
+
+[[package]]
+org = "ballerina"
 name = "lang.decimal"
+version = "0.0.0"
+dependencies = [
+	{org = "ballerina", name = "jballerina.java"}
+]
+
+[[package]]
+org = "ballerina"
+name = "lang.float"
 version = "0.0.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
@@ -210,6 +226,14 @@ dependencies = [
 ]
 modules = [
 	{org = "ballerina", packageName = "lang.value", moduleName = "lang.value"}
+]
+
+[[package]]
+org = "ballerina"
+name = "lang.xml"
+version = "0.0.0"
+dependencies = [
+	{org = "ballerina", name = "jballerina.java"}
 ]
 
 [[package]]
@@ -305,6 +329,55 @@ dependencies = [
 ]
 
 [[package]]
+org = "ballerinai"
+name = "observe"
+version = "0.0.0"
+dependencies = [
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "observe"}
+]
+
+[[package]]
+org = "ballerinax"
+name = "client.config"
+version = "1.0.1"
+dependencies = [
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "oauth2"}
+]
+
+[[package]]
+org = "ballerinax"
+name = "salesforce"
+version = "8.2.0"
+dependencies = [
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "io"},
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "lang.boolean"},
+	{org = "ballerina", name = "lang.float"},
+	{org = "ballerina", name = "lang.int"},
+	{org = "ballerina", name = "lang.runtime"},
+	{org = "ballerina", name = "lang.string"},
+	{org = "ballerina", name = "lang.xml"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "os"},
+	{org = "ballerina", name = "time"},
+	{org = "ballerina", name = "url"},
+	{org = "ballerinai", name = "observe"},
+	{org = "ballerinax", name = "client.config"}
+]
+modules = [
+	{org = "ballerinax", packageName = "salesforce", moduleName = "salesforce"},
+	{org = "ballerinax", packageName = "salesforce", moduleName = "salesforce.apex"},
+	{org = "ballerinax", packageName = "salesforce", moduleName = "salesforce.bulk"},
+	{org = "ballerinax", packageName = "salesforce", moduleName = "salesforce.bulkv2"},
+	{org = "ballerinax", packageName = "salesforce", moduleName = "salesforce.soap"},
+	{org = "ballerinax", packageName = "salesforce", moduleName = "salesforce.types"},
+	{org = "ballerinax", packageName = "salesforce", moduleName = "salesforce.utils"}
+]
+
+[[package]]
 org = "dinika"
 name = "sign_up_service"
 version = "0.1.0"
@@ -313,7 +386,8 @@ dependencies = [
 	{org = "ballerina", name = "lang.regexp"},
 	{org = "ballerina", name = "lang.runtime"},
 	{org = "ballerina", name = "lang.value"},
-	{org = "ballerina", name = "log"}
+	{org = "ballerina", name = "log"},
+	{org = "ballerinax", name = "salesforce"}
 ]
 modules = [
 	{org = "dinika", packageName = "sign_up_service", moduleName = "sign_up_service"}

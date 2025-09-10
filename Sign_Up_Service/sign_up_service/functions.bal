@@ -460,25 +460,36 @@ function checkOrganizationExists(string businessName) returns Organization?|erro
 }
 
 // Function to create a new organization
-function createOrganization(string businessName, string organizationName) returns OrganizationCreateResponse|error {
+function createOrganization(string businessName, string organizationName, string? registeredBusinessNumber) returns OrganizationCreateResponse|error {
     // Get access token for organization management
     string|error accessToken = getCurrentAccessToken();
     if accessToken is error {
         return accessToken;
     }
 
+    // Build attributes array dynamically
+    OrganizationAttribute[] attributes = [
+        {
+            key: "business-name",
+            value: businessName
+        },
+        {
+            key: "type",
+            value: "self-managed-org"
+        }
+    ];
+
+    // Conditionally add account-number attribute only if registeredBusinessNumber exists
+    if registeredBusinessNumber is string {
+        attributes.push({
+            key: "account-number",
+            value: registeredBusinessNumber
+        });
+    }
+
     OrganizationCreateRequest createRequest = {
         name: organizationName,
-        attributes: [
-            {
-                key: "business-name",
-                value: businessName
-            },
-            {
-                key: "type",
-                value: "self-managed-org"
-            }
-        ]
+        attributes: attributes
     };
 
     map<string|string[]> headers = {
@@ -688,7 +699,7 @@ function handleUserCreationFlow(BusinessInfo businessInfo, OrganizationInfo orgI
 }
 
 // Function to handle organization setting up logic
-function handleOrganizationSetup(string? businessName) returns OrganizationInfo?|error {
+function handleOrganizationSetup(string? businessName, string? registeredBusinessNumber) returns OrganizationInfo?|error {
     if businessName is () {
         return ();
     }
@@ -720,7 +731,7 @@ function handleOrganizationSetup(string? businessName) returns OrganizationInfo?
         string organizationName = normalizeOrganizationName(businessName);
         log:printInfo("Creating organization with normalized name: " + organizationName);
 
-        OrganizationCreateResponse|error newOrg = createOrganization(businessName, organizationName);
+        OrganizationCreateResponse|error newOrg = createOrganization(businessName, organizationName, registeredBusinessNumber);
 
         if newOrg is error {
             return newOrg;
@@ -795,4 +806,29 @@ function handleOrganizationSetup(string? businessName) returns OrganizationInfo?
         orgAdminGroupId: adminGroupId,
         accessToken: orgToken
     };
+}
+
+// Function to get Salesforce Account Number by business name
+function getAccountNumberFromSalesforce(string businessName) returns string|error {
+
+    string soql = string `SELECT AccountNumber FROM Account WHERE Name='${businessName}'`;
+    
+    log:printInfo("Querying Salesforce for business name: " + businessName);
+    log:printDebug("SOQL Query: " + soql);
+
+    stream<record {}, error?> queryResult = check salesforceClient->query(soql);
+    record {}[] accounts = check from record {} accountRecord in queryResult
+        select accountRecord;
+
+    if accounts.length() > 0 {
+        record {} firstAccount = accounts[0];
+        anydata idValue = firstAccount["AccountNumber"];
+        if idValue is string {
+            return idValue;
+        } else {
+            return error(string `Invalid Id type for Business: ${businessName}`);
+        }
+    } else {
+        return error(string `Business not found for name: ${businessName}`);
+    }
 }
