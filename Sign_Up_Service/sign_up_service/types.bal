@@ -43,6 +43,7 @@ public type Organization record {|
     string id;
     string name;
     OrganizationAttribute[] attributes?;
+    anydata...;
 |};
 
 public type OrganizationsResponse record {|
@@ -111,7 +112,7 @@ public type RoleCreateResponse record {|
 // SCIM2 Group types
 public type GroupCreateRequest record {|
     string displayName;
-    anydata[] members;
+    anydata[] members?;
     string[] schemas;
 |};
 

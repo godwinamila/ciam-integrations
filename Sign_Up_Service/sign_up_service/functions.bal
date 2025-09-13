@@ -334,7 +334,6 @@ function createOrgAdminRole(string organizationId, string accessToken) returns s
 function createOrgAdminsGroup(string accessToken) returns string|error {
     GroupCreateRequest groupRequest = {
         displayName: "DEFAULT/org-admins-group",
-        members: [],
         schemas: ["urn:ietf:params:scim:schemas:core:2.0:Group"]
     };
 
@@ -480,11 +479,15 @@ function createOrganization(string businessName, string organizationName, string
     ];
 
     // Conditionally add account-number attribute only if registeredBusinessNumber exists
-    if registeredBusinessNumber is string {
-        attributes.push({
-            key: "account-number",
-            value: registeredBusinessNumber
-        });
+    if (registeredBusinessNumber is string) {
+        string trimmedBusinessNumber = registeredBusinessNumber.trim();
+        if trimmedBusinessNumber.length() > 0 {
+            attributes.push({
+                key: "account-number",
+                value: trimmedBusinessNumber
+            });
+            log:printInfo("Added account-number attribute with value: " + trimmedBusinessNumber);
+        }
     }
 
     OrganizationCreateRequest createRequest = {
@@ -531,11 +534,18 @@ function createUser(BusinessInfo userData, string orgToken) returns UserCreateRe
         return error("Email address is required for user creation");
     }
 
+    // Always add WSO2 schema extension with verifyEmail set to true
+    map<anydata> wso2Schema = {
+        "verifyEmail": "true"
+    };
+
     // Add required password field
     if userData.password is string {
         userCreateRequest["password"] = userData.password;
     } else {
-        return error("Password is required for user creation");
+        log:printInfo("Password is not provided. Creating user with askPassword option");
+        wso2Schema["askPassword"] = true;
+        _ = wso2Schema.remove("verifyEmail");
     }
 
     // Conditionally add name fields if available
@@ -560,13 +570,12 @@ function createUser(BusinessInfo userData, string orgToken) returns UserCreateRe
         ];
     }
 
-    // Conditionally add WSO2 schema extension if country is available
+    // Conditionally add country if available
     if userData.country is string {
-        userCreateRequest["urn:scim:wso2:schema"] = {
-            "verifyEmail": "true",
-            "country": userData.country
-        };
+        wso2Schema["country"] = userData.country;
     }
+
+    userCreateRequest["urn:scim:wso2:schema"] = wso2Schema;
 
     // Conditionally add custom schema extension if marketing consent is available
     if userData.marketingConsent is string {
