@@ -1,0 +1,14 @@
+[
+  {
+    "orgId": "customer-a-org",
+    "plan": "Enterprise",
+    "features": ["advanced_dashboards", "advanced_reporting"],
+    "validUntil": "2026-12-31"
+  },
+  {
+    "orgId": "customer-c-org", 
+    "plan": "Standard",
+    "features": ["basic_dashboards", "basic_reporting"],
+    "validUntil": "2025-12-31"
+  }
+]

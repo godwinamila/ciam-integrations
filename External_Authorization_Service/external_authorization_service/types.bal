@@ -1,4 +1,5 @@
 import ballerina/http;
+
 type TokenResponse record {|
     *http:Ok;
     ScopeAddResponse body;
@@ -17,6 +18,7 @@ public type ScopeAddResponse record {
     string actionStatus;
     Operation[]? operations?;
 };
+
 public type Operation record {
     string op;
     string path;
@@ -68,6 +70,7 @@ public type AccessToken record {|
     Claim[] claims?;
     anydata...;
 |};
+
 public type Claim record {
     string name;
     anydata value;
@@ -76,4 +79,11 @@ public type Claim record {
 public type AllowedOperation record {
     string op;
     string[] paths;
+};
+
+public type OrganizationEntitlement record {
+    string orgId;
+    string plan;
+    string[] features;
+    string validUntil;
 };

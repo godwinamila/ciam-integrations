@@ -1,4 +1,5 @@
 import ballerina/http;
+import ballerina/io;
 import ballerina/log;
 
 // HTTP service for handling token requests
@@ -77,14 +78,21 @@ function handlePreIssueAccessToken(TokenRequest tokenRequest) returns TokenRespo
     
     if scopeAddAllowed {
         log:printInfo("scope add operation is allowed");
-        // Include operations if scope add is allowed
-        response.operations = [
-            {
-                op: "add",
-                path: "/accessToken/scopes/-",
-                value: "custom-scope-1"
-            }
-        ];
+        
+        // Get organization entitlements and add scopes based on organization
+        Operation[] operations = getOrganizationScopes(tokenRequest);
+        if operations.length() > 0 {
+            response.operations = operations;
+        } else {
+            // Fallback to default scope if no organization entitlements found
+            response.operations = [
+                {
+                    op: "add",
+                    path: "/accessToken/scopes/-",
+                    value: "trial_account"
+                }
+            ];
+        }
     } else {
         // Log that scope add operation is not allowed
         log:printInfo("scope add operation not allowed");
@@ -95,4 +103,61 @@ function handlePreIssueAccessToken(TokenRequest tokenRequest) returns TokenRespo
     log:printInfo("Complete response payload: " + responsePayload);
 
     return {body: {...response}};
+}
+
+// Function to get organization scopes based on entitlements
+function getOrganizationScopes(TokenRequest tokenRequest) returns Operation[] {
+    Operation[] operations = [];
+    
+    // Get user organization name
+    string? userOrgName = tokenRequest.event.user?.organization?.name;
+    if userOrgName is () {
+        log:printInfo("User organization name not found");
+        return operations;
+    }
+    
+    // Read entitlements file
+    json|io:Error entitlementsResult = io:fileReadJson(entitlementsFilePath);
+    if entitlementsResult is io:Error {
+        log:printError("Failed to read entitlements file", 'error = entitlementsResult);
+        return operations;
+    }
+    
+    // Convert JSON to entitlements array
+    OrganizationEntitlement[]|error entitlements = entitlementsResult.cloneWithType();
+    if entitlements is error {
+        log:printError("Failed to parse entitlements", 'error = entitlements);
+        return operations;
+    }
+    
+    // Find organization by name
+    OrganizationEntitlement? orgEntitlement = ();
+    foreach OrganizationEntitlement entitlement in entitlements {
+        if entitlement.orgId == userOrgName {
+            orgEntitlement = entitlement;
+            break;
+        }
+    }
+    
+    if orgEntitlement is () {
+        log:printInfo("Organization not found in entitlements", organizationName = userOrgName);
+        return operations;
+    }
+    
+    log:printInfo("Found organization entitlement", 
+        organizationName = userOrgName,
+        plan = orgEntitlement.plan,
+        featuresCount = orgEntitlement.features.length()
+    );
+    
+    // Create operations for each feature
+    foreach string feature in orgEntitlement.features {
+        operations.push({
+            op: "add",
+            path: "/accessToken/scopes/-",
+            value: feature
+        });
+    }
+    
+    return operations;
 }
