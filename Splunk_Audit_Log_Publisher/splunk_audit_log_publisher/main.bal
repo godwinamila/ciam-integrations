@@ -1,8 +1,13 @@
 import ballerina/http;
 import ballerina/log;
 
-// Initialize HTTP client for Splunk HEC
-final http:Client splunkClient = check new (splunkUrl);
+// Configure HTTP client with proper settings for Splunk HEC
+http:ClientConfiguration clientConfig = {
+    timeout: 60
+};
+
+// Initialize HTTP client for Splunk HEC with configuration
+final http:Client splunkClient = check new (splunkUrl, clientConfig);
 
 // HTTP service to handle log requests
 service /logs on new http:Listener(8080) {
