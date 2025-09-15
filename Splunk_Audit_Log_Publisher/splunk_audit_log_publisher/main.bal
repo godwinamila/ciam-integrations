@@ -1,16 +1,21 @@
 import ballerina/http;
 import ballerina/log;
 
-// Configure HTTP client with proper settings for Splunk HEC
+// Configure HTTP client with SSL settings for Splunk HEC
 http:ClientConfiguration clientConfig = {
-    timeout: 60
+    timeout: 60,
+    secureSocket: {
+        cert: splunkServiceCert,
+        verifyHostName: false
+    } 
 };
+    
 
 // Initialize HTTP client for Splunk HEC with configuration
 final http:Client splunkClient = check new (splunkUrl, clientConfig);
 
 // HTTP service to handle log requests
-service /logs on new http:Listener(8080) {
+service /logs on new http:Listener(8081) {
     
     resource function post .(http:Request request) returns http:Response|error {
         // Extract JSON payload from request
