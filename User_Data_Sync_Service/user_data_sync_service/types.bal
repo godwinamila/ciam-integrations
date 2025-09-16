@@ -92,7 +92,9 @@ public type AzureUserData record {
     string userPrincipalName;
     string mail;
     boolean accountEnabled;
-    string displayName;
+    string givenName;
+    string surname;
+    string country?;
 };
 
 // Password profile for Azure AD user
@@ -116,6 +118,15 @@ public type AzureUserRequest record {
     string mail;
     string mailNickname;
     PasswordProfile passwordProfile;
+    string country?;
+};
+
+// Azure AD user profile update request
+public type AzureUserUpdateRequest record {
+    string givenName?;
+    string surname?;
+    string country?;
+    string displayName?;
 };
 
 // Azure AD user creation response

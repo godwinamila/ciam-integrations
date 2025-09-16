@@ -129,6 +129,10 @@ service / on webhookListener {
             return;
         }
 
+        // Log the incoming event payload
+        string payloadString = payload.toJsonString();
+        log:printInfo("Received webhook event payload", eventPayload = payloadString);
+
         // Convert JSON to SecurityEventToken record
         SecurityEventToken|error setPayload = payload.cloneWithType(SecurityEventToken);
         if setPayload is error {
@@ -262,6 +266,7 @@ function processUserCreatedEvent(json eventData, SecurityEventToken setPayload) 
     string userEmail = "default@email.com";
     string userFirstName = "fname";
     string userLastName = "lname";
+    string userCountry = "test";
 
     // Process user claims
     foreach UserClaim claim in regEvent.user.claims {
@@ -273,6 +278,8 @@ function processUserCreatedEvent(json eventData, SecurityEventToken setPayload) 
             userFirstName = formattedValue;
         } else if (claim.uri == "http://wso2.org/claims/lastname") {
             userLastName = formattedValue;
+        } else if (claim.uri == "http://wso2.org/claims/country") {
+            userCountry = formattedValue;
         }
     }
 
@@ -281,29 +288,44 @@ function processUserCreatedEvent(json eventData, SecurityEventToken setPayload) 
     log:printInfo("Successfully obtained access token");
 
     string mailNickname = regexp:split(re `@`, userEmail)[0];
-    string upn = mailNickname + "#EXT#@" + issuerDomain;
+    string upn = regEvent.user.id + "#EXT#@" + issuerDomain;
 
-     AzureUserData azureUser = {
-        mailNickname: mailNickname,
-        userPrincipalName: upn,
-        mail: userEmail,
-        accountEnabled: true,
-        displayName: userFirstName + " " + userLastName
-     };
+    // Conditionally create AzureUserData with country field only if it's not "test"
+    AzureUserData azureUser;
+    if userCountry != "test" {
+        azureUser = {
+            mailNickname: mailNickname,
+            userPrincipalName: upn,
+            mail: userEmail,
+            accountEnabled: true,
+            givenName: userFirstName,
+            surname: userLastName,
+            country: userCountry
+        };
+    } else {
+        azureUser = {
+            mailNickname: mailNickname,
+            userPrincipalName: upn,
+            mail: userEmail,
+            accountEnabled: true,
+            givenName: userFirstName,
+            surname: userLastName
+        };
+    }
         
-    string processingMessage = string `Processing user: ${azureUser.displayName} (${azureUser.mail})`;
+    string processingMessage = string `Processing user: ${azureUser.mail} (${azureUser.mail})`;
     log:printInfo(processingMessage);
     
     // Create user in Azure AD
     AzureUserResponse|error createdUser = createAzureUser(userData = azureUser, accessToken = accessToken);
     
     if createdUser is error {
-        string userErrorMessage = string `Error creating user ${azureUser.displayName}: ${createdUser.message()}`;
+        string userErrorMessage = string `Error creating user ${azureUser.mail}: ${createdUser.message()}`;
         log:printInfo(userErrorMessage);
         return error(userErrorMessage);
     } else {
         string userId = createdUser.id ?: "Unknown ID";
-        string userSuccessMessage = string `Successfully created user: ${azureUser.displayName} with ID: ${userId}`;
+        string userSuccessMessage = string `Successfully created user: ${azureUser.mail} with ID: ${userId}`;
         log:printInfo(userSuccessMessage);
     }
 }
@@ -323,6 +345,10 @@ function processUserProfileUpdatedEvent(json eventData, SecurityEventToken setPa
             initiatorType = updateEvent.initiatorType,
             action = updateEvent.action);
 
+    // Check if we need to update profile based on specific field changes
+    boolean shouldUpdateProfile = false;
+    AzureUserUpdateRequest updateRequest = {};
+
     // Process added claims
     UserClaim[]? addedClaims = updateEvent.user.addedClaims;
     if addedClaims is UserClaim[] {
@@ -332,17 +358,67 @@ function processUserProfileUpdatedEvent(json eventData, SecurityEventToken setPa
         }
     }
 
-    // Process updated claims
+    // Process updated claims to check for profile field changes
     UserClaim[]? updatedClaims = updateEvent.user.updatedClaims;
     if updatedClaims is UserClaim[] {
         foreach UserClaim claim in updatedClaims {
             string formattedValue = formatClaimValue(claim.value);
             log:printInfo("Updated claim", claimUri = claim.uri, claimValue = formattedValue);
+            
+            // Check if lastname, givenname, or country was updated
+            if claim.uri == "http://wso2.org/claims/lastname" {
+                updateRequest.surname = formattedValue;
+                shouldUpdateProfile = true;
+                log:printInfo("Last name updated", newValue = formattedValue);
+            } else if claim.uri == "http://wso2.org/claims/givenname" {
+                updateRequest.givenName = formattedValue;
+                shouldUpdateProfile = true;
+                log:printInfo("Given name updated", newValue = formattedValue);
+            } else if claim.uri == "http://wso2.org/claims/country" {
+                // Only update country if it's not "test"
+                if formattedValue != "test" {
+                    updateRequest.country = formattedValue;
+                    shouldUpdateProfile = true;
+                    log:printInfo("Country updated", newValue = formattedValue);
+                }
+            }
         }
     }
 
-    // Add your user profile update processing logic here
-    // For example: sync profile changes to external systems, update caches, etc.
+    // If profile fields were updated, sync to Azure
+    if shouldUpdateProfile {
+        log:printInfo("Profile fields updated, proceeding to update Azure user profile",
+                userId = updateEvent.user.id);
+
+        // If both givenName and surname are being updated, also update displayName
+        string? givenName = updateRequest.givenName;
+        string? surname = updateRequest.surname;
+        if givenName is string && surname is string {
+            updateRequest.displayName = givenName + " " + surname;
+        }
+
+        // Get OAuth2 access token
+        string|error accessToken = getAccessToken();
+        if accessToken is error {
+            log:printError("Failed to get access token for profile update", accessToken);
+            return accessToken;
+        }
+        
+        // Update profile in Azure
+        error? updateResult = updateAzureUserProfile(asgardeoUserId = updateEvent.user.id, 
+                                                    updateRequest = updateRequest, 
+                                                    accessToken = accessToken);
+        if updateResult is error {
+            log:printError("Failed to update user profile in Azure", updateResult);
+            return updateResult;
+        }
+        
+        log:printInfo("Successfully updated user profile in Azure",
+                userId = updateEvent.user.id);
+    } else {
+        log:printInfo("No relevant profile fields updated, skipping Azure sync",
+                userId = updateEvent.user.id);
+    }
 }
 
 // Function to process user deleted events
@@ -359,12 +435,26 @@ function processUserDeletedEvent(json eventData, SecurityEventToken setPayload) 
             userStoreName = deleteEvent.userStore.name,
             initiatorType = deleteEvent.initiatorType);
 
-    // Process user claims
+    // Process user claims for logging purposes
     foreach UserClaim claim in deleteEvent.user.claims {
         string formattedValue = formatClaimValue(claim.value);
         log:printInfo("Deleted user claim", claimUri = claim.uri, claimValue = formattedValue);
     }
 
-    // Add your user deletion processing logic here
-    // For example: cleanup user data, revoke access, sync deletions to external systems, etc.
+    // Get OAuth2 access token for Azure operations
+    string|error accessToken = getAccessToken();
+    if accessToken is error {
+        log:printError("Failed to get access token for user deletion", accessToken);
+        return accessToken;
+    }
+
+    // Delete user from Azure AD
+    error? deleteResult = deleteAzureUser(asgardeoUserId = deleteEvent.user.id, accessToken = accessToken);
+    if deleteResult is error {
+        log:printError("Failed to delete user from Azure AD", deleteResult);
+        return deleteResult;
+    }
+
+    log:printInfo("Successfully processed user deletion and removed from Azure AD",
+            userId = deleteEvent.user.id);
 }
