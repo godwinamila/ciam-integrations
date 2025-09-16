@@ -138,6 +138,19 @@ public type AzureUserResponse record {|
     anydata...;
 |};
 
+// Azure AD user info for search results
+public type AzureUserInfo record {|
+    string id?;
+    string userPrincipalName?;
+    anydata...;
+|};
+
+// Azure AD user search response
+public type AzureUserSearchResponse record {|
+    AzureUserInfo[] value?;
+    anydata...;
+|};
+
 // OAuth2 token response
 public type TokenResponse record {|
     string access_token;
