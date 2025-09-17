@@ -2,24 +2,30 @@ import ballerina/http;
 import ballerina/log;
 
 // Function to send event to Splunk
-function sendEventToSplunk(string eventType, json eventData, SecurityEventToken setPayload) returns error? {
+function sendEventToSplunk(string eventType, int timestamp, SessionEstablishedEvent|SessionRevokedEvent|LoginSuccessEvent|LoginFailedEvent eventData, string eventId) returns error? {
     
     // Create Splunk event payload
     SplunkEvent splunkEvent = {
-        time: setPayload.iat,
-        event: {
-            "eventType": eventType,
-            "issuer": setPayload.iss,
-            "jwtId": setPayload.jti,
-            "issuedAt": setPayload.iat,
-            "eventData": eventData
-        }
+        eventId: eventId,
+        eventType: eventType,
+        timestamp: timestamp,
+        eventData: eventData 
     };
 
-    // Send to Splunk HEC
-    http:Response|error response = splunkClient->post("", splunkEvent, {
-        "Content-Type": "application/json"
-    });
+    log:printInfo("Sending event : " + splunkEvent.toJsonString());
+
+    map<string|string[]> headers = {
+            "Authorization": "Splunk " + hecToken,
+            "Content-Type": "application/json"
+    };
+
+    http:Response|error response = splunkClient->post(
+        path = "", 
+        message = {
+            "event": splunkEvent,
+            "sourcetype": "asgardeo_idp_index"    
+        }, 
+        headers = headers);
 
     if response is error {
         log:printError("Failed to send event to Splunk", response);
@@ -37,21 +43,24 @@ function sendEventToSplunk(string eventType, json eventData, SecurityEventToken 
     // Parse response
     json|error responseJson = response.getJsonPayload();
     if responseJson is error {
-        log:printWarn("Could not parse Splunk response as JSON", responseJson);
+        log:printError(string`Could not parse Splunk response as JSON:  - ${responseJson.detail().toString()}`);
     } else {
         SplunkHecResponse|error splunkResponse = responseJson.cloneWithType(SplunkHecResponse);
         if splunkResponse is SplunkHecResponse {
-            if splunkResponse.code != 0 {
+            if splunkResponse.text != "Success" {
                 log:printError("Splunk HEC processing error", code = splunkResponse.code, text = splunkResponse.text);
                 return error("Splunk processing error: " + splunkResponse.text);
             }
-            log:printInfo("Event successfully sent to Splunk", code = splunkResponse.code, text = splunkResponse.text);
+            log:printInfo("Event successfully sent to Splunk", eventId = splunkResponse.code, text = splunkResponse.text);
+        } else {
+            log:printError(string`Failed to publsih event:  - ${splunkResponse.detail().toString()}`);
+            return error("Failed to publsih event: " + splunkResponse.message());
         }
     }
 
     log:printInfo("Event published to Splunk successfully", 
                   eventType = eventType, 
-                  jwtId = setPayload.jti);
+                  eventId = eventId);
     
     return;
 }
