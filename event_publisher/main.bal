@@ -86,7 +86,7 @@ service / on webhookListener {
             log:printInfo("Signature verification skipped due to configuration");
         } else {
             // Verify signature if webhook secret is configured
-            if webhookSecret.trim() != "" {
+            if webhookKey.trim() != "" {
                 error? signatureVerification = verifyWebhookSignature(request, rawPayload);
                 if signatureVerification is error {
                     log:printError("Webhook signature verification failed", signatureVerification);
@@ -150,12 +150,35 @@ service / on webhookListener {
             readableEventTypes.push(readableEventType);
         }
 
-        // Log the incoming event payload with event type information
+        // Get payload string and check its size
         string payloadString = payload.toJsonString();
-        log:printInfo("Received webhook event", 
-                eventTypes = readableEventTypes, 
-                fullEventUrls = eventTypes,
-                eventPayload = payloadString);
+        int payloadSize = payloadString.length();
+        
+        // Log payload information with size details
+        if payloadSize > 2000 {
+            // Log truncated payload for large payloads
+            string truncatedPayload = payloadString.substring(0, 2000) + "... [TRUNCATED]";
+            log:printInfo("Received webhook event (large payload)", 
+                    eventTypes = readableEventTypes, 
+                    fullEventUrls = eventTypes,
+                    payloadSize = payloadSize,
+                    truncatedPayload = truncatedPayload);
+        } else {
+            // Log full payload for smaller payloads
+            log:printInfo("Received webhook event", 
+                    eventTypes = readableEventTypes, 
+                    fullEventUrls = eventTypes,
+                    payloadSize = payloadSize,
+                    eventPayload = payloadString);
+        }
+
+        // Also log key payload components separately
+        log:printInfo("Webhook event details",
+                issuer = setPayload.iss,
+                jwtId = setPayload.jti,
+                issuedAt = setPayload.iat,
+                requestCorrelationId = setPayload?.rci ?: "N/A",
+                eventCount = eventTypes.length());
 
         // Process the Security Event Token
         error? processResult = processSecurityEventToken(setPayload);
@@ -205,6 +228,125 @@ function extractEventTypeName(string eventTypeUrl) returns string {
     return eventTypeUrl;
 }
 
+// Function to get username from user claims (handles both claims and addedClaims)
+function getUsernameFromClaims(UserClaim[]? claims) returns string {
+    if claims is () {
+        return "N/A";
+    }
+    
+    foreach UserClaim claim in claims {
+        if claim.uri == "http://wso2.org/claims/username" {
+            string|string[] claimValue = claim.value;
+            if claimValue is string {
+                return claimValue;
+            } else {
+                // If it's an array, return the first element
+                if claimValue.length() > 0 {
+                    return claimValue[0];
+                }
+            }
+        }
+    }
+    return "N/A";
+}
+
+// Function to get email from user claims (handles both claims and addedClaims)
+function getEmailFromClaims(UserClaim[]? claims) returns string {
+    if claims is () {
+        return "N/A";
+    }
+    
+    foreach UserClaim claim in claims {
+        if claim.uri == "http://wso2.org/claims/emailaddress" {
+            string|string[] claimValue = claim.value;
+            if claimValue is string {
+                return claimValue;
+            } else {
+                // If it's an array, return the first element
+                if claimValue.length() > 0 {
+                    return claimValue[0];
+                }
+            }
+        }
+    }
+    return "N/A";
+}
+
+// Function to get claim value by URI from user claims
+function getClaimValueByUri(UserClaim[]? claims, string claimUri) returns string {
+    if claims is () {
+        return "N/A";
+    }
+    
+    foreach UserClaim claim in claims {
+        if claim.uri == claimUri {
+            string|string[] claimValue = claim.value;
+            if claimValue is string {
+                return claimValue;
+            } else {
+                // If it's an array, return the first element
+                if claimValue.length() > 0 {
+                    return claimValue[0];
+                }
+            }
+        }
+    }
+    return "N/A";
+}
+
+// Function to get claim value as string array by URI from user claims
+function getClaimValueArrayByUri(UserClaim[]? claims, string claimUri) returns string[] {
+    if claims is () {
+        return [];
+    }
+    
+    foreach UserClaim claim in claims {
+        if claim.uri == claimUri {
+            string|string[] claimValue = claim.value;
+            if claimValue is string {
+                return [claimValue];
+            } else {
+                return claimValue;
+            }
+        }
+    }
+    return [];
+}
+
+// Function to get all claim URIs from user claims
+function getClaimUris(UserClaim[]? claims) returns string[] {
+    if claims is () {
+        return [];
+    }
+    
+    string[] claimUris = [];
+    foreach UserClaim claim in claims {
+        claimUris.push(claim.uri);
+    }
+    return claimUris;
+}
+
+// Function to format claim values for logging
+function formatClaimValues(UserClaim[]? claims) returns map<string> {
+    if claims is () {
+        return {};
+    }
+    
+    map<string> formattedClaims = {};
+    foreach UserClaim claim in claims {
+        string claimKey = claim.uri;
+        string|string[] claimValue = claim.value;
+        
+        if claimValue is string {
+            formattedClaims[claimKey] = claimValue;
+        } else {
+            // Join array values with comma
+            formattedClaims[claimKey] = string:'join(", ", ...claimValue);
+        }
+    }
+    return formattedClaims;
+}
+
 // Function to verify webhook signature using HMAC-SHA256
 function verifyWebhookSignature(http:Request request, byte[] rawPayload) returns error? {
 
@@ -222,7 +364,7 @@ function verifyWebhookSignature(http:Request request, byte[] rawPayload) returns
     // string expectedSignature = signatureHeader.substring(7); // Remove "sha256=" prefix
 
     // Compute HMAC-SHA256 using webhook secret
-    byte[] secretBytes = webhookSecret.toBytes();
+    byte[] secretBytes = webhookKey.toBytes();
     byte[]|crypto:Error computedHmac = crypto:hmacSha256(input = rawPayload, key = secretBytes);
 
     if computedHmac is crypto:Error {
@@ -254,44 +396,271 @@ function processSecurityEventToken(SecurityEventToken setPayload) returns error?
     // Process each event type
     foreach string eventType in eventTypes {
         json eventData = setPayload.events.get(eventType);
-        check processEventByType(eventType, eventData, setPayload);
+        check processEventByType(eventType, eventData);
     }
 }
 
 // Function to process events based on their type URL
-function processEventByType(string eventType, json eventData, SecurityEventToken setPayload) returns error? {
+function processEventByType(string eventType, json eventData) returns error? {
 
     string readableEventType = extractEventTypeName(eventType);
     
-    log:printInfo("Processing specific event", 
-            eventType = readableEventType,
-            fullEventUrl = eventType,
-            eventPayload = setPayload.toJsonString());
-
     // Process different event types based on readable event type name
     if readableEventType == "sessionEstablished" {
-        log:printInfo("Processing session established event");
+        SessionEstablishedEvent|error sessionEvent = eventData.cloneWithType(SessionEstablishedEvent);
+        if sessionEvent is error {
+            log:printError("Failed to parse session established event", sessionEvent);
+            return;
+        }
+        
+        string username = getUsernameFromClaims(sessionEvent.user?.claims);
+        log:printInfo("Processing session established event",
+                sessionId = sessionEvent.session.id,
+                userId = sessionEvent.user?.id ?: "N/A",
+                username = username,
+                userStoreName = sessionEvent.userStore.name,
+                tenantName = sessionEvent.tenant.name,
+                applicationName = sessionEvent.application.name,
+                loginTime = sessionEvent.session.loginTime);
+                
     } else if readableEventType == "loginSuccess" {
-        log:printInfo("Processing login success event");
+        LoginSuccessEvent|error loginEvent = eventData.cloneWithType(LoginSuccessEvent);
+        if loginEvent is error {
+            log:printError("Failed to parse login success event", loginEvent);
+            return;
+        }
+        
+        string username = getUsernameFromClaims(loginEvent.user?.claims);
+        log:printInfo("Processing login success event",
+                userId = loginEvent.user?.id ?: "N/A",
+                username = username,
+                userStoreName = loginEvent.userStore.name,
+                tenantName = loginEvent.tenant.name,
+                applicationName = loginEvent.application.name,
+                authenticationMethods = loginEvent.authenticationMethods);
+                
     } else if readableEventType == "accessTokenIssued" {
-        log:printInfo("Processing access token issued event");
+        AccessTokenIssuedEvent|error tokenEvent = eventData.cloneWithType(AccessTokenIssuedEvent);
+        if tokenEvent is error {
+            log:printError("Failed to parse access token issued event", tokenEvent);
+            return;
+        }
+        
+        string username = getUsernameFromClaims(tokenEvent.user?.claims);
+        log:printInfo("Processing access token issued event",
+                userId = tokenEvent.user?.id ?: "N/A",
+                username = username,
+                userStoreName = tokenEvent.userStore.name,
+                tenantName = tokenEvent.tenant.name,
+                applicationName = tokenEvent.application.name,
+                consumerKey = tokenEvent.application?.consumerKey ?: "N/A",
+                tokenType = tokenEvent.accessToken.tokenType,
+                grantType = tokenEvent.accessToken.grantType,
+                issuedAt = tokenEvent.accessToken.iat);
+                
     } else if readableEventType == "accessTokenRevoked" {
-        log:printInfo("Processing access token revoked event");
+        AccessTokenRevokedEvent|error revokeEvent = eventData.cloneWithType(AccessTokenRevokedEvent);
+        if revokeEvent is error {
+            log:printError("Failed to parse access token revoked event", revokeEvent);
+            return;
+        }
+        
+        string username = getUsernameFromClaims(revokeEvent.user?.claims);
+        string[] applicationNames = [];
+        foreach Application app in revokeEvent.applications {
+            applicationNames.push(app.name);
+        }
+        
+        log:printInfo("Processing access token revoked event",
+                userId = revokeEvent.user?.id ?: "N/A",
+                username = username,
+                userStoreName = revokeEvent.userStore.name,
+                tenantName = revokeEvent.tenant.name,
+                applicationNames = applicationNames);
+                
     } else if readableEventType == "sessionRevoked" {
-        log:printInfo("Processing session revoked event");
+        SessionRevokedEvent|error sessionRevokeEvent = eventData.cloneWithType(SessionRevokedEvent);
+        if sessionRevokeEvent is error {
+            log:printError("Failed to parse session revoked event", sessionRevokeEvent);
+            return;
+        }
+        
+        string username = getUsernameFromClaims(sessionRevokeEvent.user?.claims);
+        string[] sessionIds = [];
+        foreach Session session in sessionRevokeEvent.sessions {
+            sessionIds.push(session.id);
+        }
+        
+        log:printInfo("Processing session revoked event",
+                userId = sessionRevokeEvent.user?.id ?: "N/A",
+                username = username,
+                userStoreName = sessionRevokeEvent.userStore.name,
+                tenantName = sessionRevokeEvent.tenant.name,
+                sessionIds = sessionIds);
+                
     } else if readableEventType == "userCreated" {
-        log:printInfo("Processing user created event");
+        UserCreatedEvent|error userEvent = eventData.cloneWithType(UserCreatedEvent);
+        if userEvent is error {
+            log:printError("Failed to parse user created event", userEvent);
+            return;
+        }
+        
+        string username = getUsernameFromClaims(userEvent.user?.claims);
+        string email = getEmailFromClaims(userEvent.user?.claims);
+        
+        log:printInfo("Processing user created event",
+                userId = userEvent.user?.id ?: "N/A",
+                username = username,
+                email = email,
+                userStoreName = userEvent.userStore.name,
+                tenantName = userEvent.tenant.name,
+                initiatorType = userEvent.initiatorType,
+                action = userEvent.action);
+                
     } else if readableEventType == "userAccountLocked" {
-        log:printInfo("Processing user account locked event");
+        UserAccountLockedEvent|error lockEvent = eventData.cloneWithType(UserAccountLockedEvent);
+        if lockEvent is error {
+            log:printError("Failed to parse user account locked event", lockEvent);
+            return;
+        }
+        
+        string email = getEmailFromClaims(lockEvent.user?.claims);
+        
+        log:printInfo("Processing user account locked event",
+                userId = lockEvent.user?.id ?: "N/A",
+                email = email,
+                userStoreName = lockEvent.userStore.name,
+                tenantName = lockEvent.tenant.name,
+                reason = lockEvent?.reason ?: "N/A");
+                
     } else if readableEventType == "userAccountUnlocked" {
-        log:printInfo("Processing user account unlocked event");
+        UserAccountUnlockedEvent|error unlockEvent = eventData.cloneWithType(UserAccountUnlockedEvent);
+        if unlockEvent is error {
+            log:printError("Failed to parse user account unlocked event", unlockEvent);
+            return;
+        }
+        
+        string email = getEmailFromClaims(unlockEvent.user?.claims);
+        
+        log:printInfo("Processing user account unlocked event",
+                userId = unlockEvent.user?.id ?: "N/A",
+                email = email,
+                userStoreName = unlockEvent.userStore.name,
+                tenantName = unlockEvent.tenant.name);
+                
     } else if readableEventType == "credentialUpdated" {
-        log:printInfo("Processing credential updated event");
+        CredentialUpdatedEvent|error credEvent = eventData.cloneWithType(CredentialUpdatedEvent);
+        if credEvent is error {
+            log:printError("Failed to parse credential updated event", credEvent);
+            return;
+        }
+        
+        string email = getEmailFromClaims(credEvent.user?.claims);
+        
+        log:printInfo("Processing credential updated event",
+                userId = credEvent.user?.id ?: "N/A",
+                email = email,
+                userStoreName = credEvent.userStore.name,
+                tenantName = credEvent.tenant.name,
+                credentialType = credEvent.credentialType,
+                action = credEvent.action,
+                initiatorType = credEvent.initiatorType);
+                
     } else if readableEventType == "userProfileUpdated" {
-        log:printInfo("Processing user profile updated event");
+        UserProfileUpdatedEvent|error profileEvent = eventData.cloneWithType(UserProfileUpdatedEvent);
+        if profileEvent is error {
+            log:printError("Failed to parse user profile updated event", profileEvent);
+            return;
+        }
+        
+        // Extract information about added and updated claims
+        string[] addedClaimUris = getClaimUris(profileEvent.user?.addedClaims);
+        string[] updatedClaimUris = getClaimUris(profileEvent.user?.updatedClaims);
+        
+        // Format claim values for better logging
+        map<string> addedClaimsFormatted = formatClaimValues(profileEvent.user?.addedClaims);
+        map<string> updatedClaimsFormatted = formatClaimValues(profileEvent.user?.updatedClaims);
+        
+        // Extract specific claim values for detailed logging
+        string jobTitle = getClaimValueByUri(profileEvent.user?.addedClaims, "http://wso2.org/claims/jobTitle");
+        string marketingConsent = getClaimValueByUri(profileEvent.user?.updatedClaims, "http://wso2.org/claims/marketing_consent");
+        string[] emailAddresses = getClaimValueArrayByUri(profileEvent.user?.updatedClaims, "http://wso2.org/claims/emailAddresses");
+        string[] mobileNumbers = getClaimValueArrayByUri(profileEvent.user?.updatedClaims, "http://wso2.org/claims/mobileNumbers");
+        string mobile = getClaimValueByUri(profileEvent.user?.updatedClaims, "http://wso2.org/claims/mobile");
+        string lastName = getClaimValueByUri(profileEvent.user?.updatedClaims, "http://wso2.org/claims/lastname");
+        
+        log:printInfo("Processing user profile updated event",
+                userId = profileEvent.user?.id ?: "N/A",
+                userRef = profileEvent.user?.ref ?: "N/A",
+                userStoreName = profileEvent.userStore.name,
+                tenantName = profileEvent.tenant.name,
+                organizationName = profileEvent.organization.name,
+                action = profileEvent.action,
+                initiatorType = profileEvent.initiatorType,
+                addedClaimCount = addedClaimUris.length(),
+                updatedClaimCount = updatedClaimUris.length(),
+                addedClaimUris = addedClaimUris,
+                updatedClaimUris = updatedClaimUris);
+        
+        // Log detailed claim information if there are added claims
+        if addedClaimsFormatted.length() > 0 {
+            log:printInfo("User profile added claims details",
+                    userId = profileEvent.user?.id ?: "N/A",
+                    addedClaims = addedClaimsFormatted,
+                    jobTitle = jobTitle);
+        }
+        
+        // Log detailed claim information if there are updated claims
+        if updatedClaimsFormatted.length() > 0 {
+            log:printInfo("User profile updated claims details",
+                    userId = profileEvent.user?.id ?: "N/A",
+                    updatedClaims = updatedClaimsFormatted,
+                    marketingConsent = marketingConsent,
+                    emailAddresses = emailAddresses,
+                    mobileNumbers = mobileNumbers,
+                    mobile = mobile,
+                    lastName = lastName);
+        }
+                
     } else if readableEventType == "userDeleted" {
-        log:printInfo("Processing user deleted event");
+        UserDeletedEvent|error deleteEvent = eventData.cloneWithType(UserDeletedEvent);
+        if deleteEvent is error {
+            log:printError("Failed to parse user deleted event", deleteEvent);
+            return;
+        }
+        
+        string username = getUsernameFromClaims(deleteEvent.user?.claims);
+        
+        log:printInfo("Processing user deleted event",
+                userId = deleteEvent.user?.id ?: "N/A",
+                username = username,
+                userStoreName = deleteEvent.userStore.name,
+                tenantName = deleteEvent.tenant.name,
+                initiatorType = deleteEvent.initiatorType);
+                
+    } else if readableEventType == "loginFailed" {
+        LoginFailedEvent|error failedEvent = eventData.cloneWithType(LoginFailedEvent);
+        if failedEvent is error {
+            log:printError("Failed to parse login failed event", failedEvent);
+            return;
+        }
+        
+        string username = getUsernameFromClaims(failedEvent.user?.claims);
+        
+        log:printInfo("Processing login failed event",
+                username = username,
+                tenantName = failedEvent.tenant.name,
+                organizationName = failedEvent.organization.name,
+                applicationName = failedEvent.application.name,
+                reasonDescription = failedEvent.reason.description,
+                failedStep = failedEvent.reason.context.failedStep.step,
+                failedIdp = failedEvent.reason.context.failedStep.idp);
+                
     } else {
-        log:printInfo("Processing unsupported event type", eventType = readableEventType);
+        // For unsupported event types, log the raw event data
+        string eventDataString = eventData.toJsonString();
+        log:printInfo("Processing unsupported event type", 
+                eventType = readableEventType,
+                eventData = eventDataString);
     }
 }
