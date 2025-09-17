@@ -128,10 +128,6 @@ service / on webhookListener {
             return;
         }
 
-        // Log the incoming event payload
-        string payloadString = payload.toJsonString();
-        log:printInfo("Received webhook event payload", eventPayload = payloadString);
-
         // Convert JSON to SecurityEventToken record
         SecurityEventToken|error setPayload = payload.cloneWithType(SecurityEventToken);
         if setPayload is error {
@@ -143,6 +139,23 @@ service / on webhookListener {
             check caller->respond(errorResponse);
             return;
         }
+
+        // Extract event types and log payload with event type information
+        string[] eventTypes = setPayload.events.keys();
+        string[] readableEventTypes = [];
+        
+        // Extract readable event type names from URLs
+        foreach string eventType in eventTypes {
+            string readableEventType = extractEventTypeName(eventType);
+            readableEventTypes.push(readableEventType);
+        }
+
+        // Log the incoming event payload with event type information
+        string payloadString = payload.toJsonString();
+        log:printInfo("Received webhook event", 
+                eventTypes = readableEventTypes, 
+                fullEventUrls = eventTypes,
+                eventPayload = payloadString);
 
         // Process the Security Event Token
         error? processResult = processSecurityEventToken(setPayload);
@@ -166,6 +179,30 @@ service / on webhookListener {
         };
         check caller->respond(successResponse);
     }
+}
+
+// Function to extract readable event type name from URL
+function extractEventTypeName(string eventTypeUrl) returns string {
+    // Find the last occurrence of "/" to extract the event type name
+    int? lastSlashIndex = eventTypeUrl.indexOf("/", eventTypeUrl.length() - 1);
+    int searchIndex = 0;
+    int foundIndex = -1;
+    
+    // Find the last slash by searching from beginning
+    while true {
+        int? currentIndex = eventTypeUrl.indexOf("/", searchIndex);
+        if currentIndex is () {
+            break;
+        }
+        foundIndex = currentIndex;
+        searchIndex = currentIndex + 1;
+    }
+    
+    if foundIndex >= 0 && foundIndex < eventTypeUrl.length() - 1 {
+        return eventTypeUrl.substring(foundIndex + 1);
+    }
+    
+    return eventTypeUrl;
 }
 
 // Function to verify webhook signature using HMAC-SHA256
@@ -224,17 +261,37 @@ function processSecurityEventToken(SecurityEventToken setPayload) returns error?
 // Function to process events based on their type URL
 function processEventByType(string eventType, json eventData, SecurityEventToken setPayload) returns error? {
 
-    log:printInfo("Processing event", eventType = eventType);
-    log:printInfo("Event payload", processedPayload = setPayload.toJsonString());
+    string readableEventType = extractEventTypeName(eventType);
+    
+    log:printInfo("Processing specific event", 
+            eventType = readableEventType,
+            fullEventUrl = eventType,
+            eventPayload = setPayload.toJsonString());
 
-    // Process registration success, user profile update, and user delete events
-    // if eventType.includes("userCreated") {
-    //     check processUserCreatedEvent(eventData, setPayload);
-    // } else if eventType.includes("userProfileUpdated") {
-    //     check processUserProfileUpdatedEvent(eventData, setPayload);
-    // } else if eventType.includes("userDeleted") {
-    //     check processUserDeletedEvent(eventData, setPayload);
-    // } else {
-    //     log:printInfo("Ignoring unsupported event type", eventType = eventType);
-    // }
+    // Process different event types based on readable event type name
+    if readableEventType == "sessionEstablished" {
+        log:printInfo("Processing session established event");
+    } else if readableEventType == "loginSuccess" {
+        log:printInfo("Processing login success event");
+    } else if readableEventType == "accessTokenIssued" {
+        log:printInfo("Processing access token issued event");
+    } else if readableEventType == "accessTokenRevoked" {
+        log:printInfo("Processing access token revoked event");
+    } else if readableEventType == "sessionRevoked" {
+        log:printInfo("Processing session revoked event");
+    } else if readableEventType == "userCreated" {
+        log:printInfo("Processing user created event");
+    } else if readableEventType == "userAccountLocked" {
+        log:printInfo("Processing user account locked event");
+    } else if readableEventType == "userAccountUnlocked" {
+        log:printInfo("Processing user account unlocked event");
+    } else if readableEventType == "credentialUpdated" {
+        log:printInfo("Processing credential updated event");
+    } else if readableEventType == "userProfileUpdated" {
+        log:printInfo("Processing user profile updated event");
+    } else if readableEventType == "userDeleted" {
+        log:printInfo("Processing user deleted event");
+    } else {
+        log:printInfo("Processing unsupported event type", eventType = readableEventType);
+    }
 }
