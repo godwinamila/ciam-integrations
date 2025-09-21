@@ -129,6 +129,7 @@ service / on new http:Listener(9090) {
     resource function post authentication\-status(AuthenticationStatusRequest authStatus) 
         returns http:Ok|http:BadRequest {
 
+        log:printInfo(string `Received authentication status check.`);
         string contextId = authStatus.contextId;
         string username = authStatus.username;
 
