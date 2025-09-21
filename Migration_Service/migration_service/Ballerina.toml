@@ -1,0 +1,8 @@
+[package]
+org = "dinika"
+name = "migration_service"
+version = "0.1.0"
+title = "migration_service"
+
+[build-options]
+sticky = true
