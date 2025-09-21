@@ -48,3 +48,21 @@ type AuthenticationStatusRequest record {|
     readonly string contextId;
     readonly string username;
 |};
+
+type TokenSwitchResponse record {|
+    string access_token;
+    json...;
+|};
+
+type LegacyIdpErrorResponse record {|
+    string error_description;
+    string 'error?;
+    anydata...;
+|};
+
+type LegacyIdpTokenResponse record {|
+    string access_token;
+    string token_type?;
+    int expires_in?;
+    anydata...;
+|};

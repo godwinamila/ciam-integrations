@@ -72,27 +72,94 @@ isolated function getAsgardeoUser(string id) returns AsgardeoUser|error {
 isolated function authenticateUser(User user) returns error? {
 
     // Create a new HTTP client to connect to the external IDP.
-    final http:Client legacyIDPClient = check new (legacyIDPUrl, {
-        auth: {
-            username: user.username,
-            password: user.password
-        },
-        secureSocket: {
-            enable: false
-        }
+    final http:Client legacyIDPClient = check new (legacyIDPBaseUrl, {
+        timeout: 30
     });
+
+    string credentials = string `${legacyIDPClientId}:${legacyIDPClientSecret}`;
+    string encodedCredentials = credentials.toBytes().toBase64();
+
+    map<string|string[]> headers = {
+        "Authorization": string `Basic ${encodedCredentials}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+    };
+
+    string requestBody = string `grant_type=password&username=${user.username}&password=${user.password}`;
 
     // Authenticate the user by invoking the external IDP.
     // In this example, the external authentication is done invoking the SCIM2 Me endpoint.
     // You may replace this with an implementation that suits your IDP.
-    http:Response response = check legacyIDPClient->get("/scim2/Me");
+    http:Response response = check legacyIDPClient->post("/oauth2/token", requestBody, headers = headers);
 
-    // Check if the authentication was unsuccessful.
-    if response.statusCode == http:STATUS_UNAUTHORIZED {
-        log:printError(string `Authentication failed for the user: ${user.id}. Invalid credentials`);
-        return error("Invalid credentials");
-    } else if response.statusCode != http:STATUS_OK {
+    // Check if the authentication was successful.
+    if response.statusCode == http:STATUS_OK {
+        // Parse the response body to check if access token exists
+        json|error responseBody = response.getJsonPayload();
+        
+        if responseBody is json {
+            LegacyIdpTokenResponse|error tokenResponse = responseBody.cloneWithType(LegacyIdpTokenResponse);
+            
+            if tokenResponse is LegacyIdpTokenResponse {
+                // Access token exists in the response (verified by successful record conversion)
+                log:printInfo(string `Authentication successful for user: ${user.id}. Access token received.`);
+                return;
+            } else {
+                log:printError(string `Authentication failed for the user: ${user.id}. Invalid token response format.`);
+                return error("Authentication failed");
+            }
+        } else {
+            log:printError(string `Authentication failed for the user: ${user.id}. Unable to parse response body.`);
+            return error("Authentication failed");
+        }
+        
+    } else if response.statusCode == http:STATUS_BAD_REQUEST {
+        
+        // Parse the response body to get error details
+        json|error responseBody = response.getJsonPayload();
+        
+        if responseBody is json {
+            LegacyIdpErrorResponse|error errorResponse = responseBody.cloneWithType(LegacyIdpErrorResponse);
+            
+            if errorResponse is LegacyIdpErrorResponse {
+                string errorDescription = errorResponse.error_description;
+                
+                // Check if error_description contains "Authentication failed for"
+                if errorDescription.includes("Authentication failed") {
+                    log:printError(string `Authentication failed for the user: ${user.id}. Invalid credentials`);
+                    return error("Invalid Credentials");
+                } else {
+                    log:printError(string `Authentication failed for the user: ${user.id}.`);
+                    return error("Authentication failed");
+                }
+            }
+        }
+        // Fallback if unable to parse response body
+        log:printError(string `Authentication failed for the user: ${user.id}.`);
+        return error("Authentication failed");
+    } else {
         log:printError(string `Authentication failed for the user: ${user.id}.`);
         return error("Authentication failed");
     }
+}
+
+function getCurrentAccessToken() returns string|error {
+    string credentials = string `${asgardeoClientId}:${asgardeoClientSecret}`;
+    string encodedCredentials = credentials.toBytes().toBase64();
+
+    map<string|string[]> headers = {
+        "Authorization": string `Basic ${encodedCredentials}`,
+        "Content-Type": "application/x-www-form-urlencoded"
+    };
+
+    string requestBody = string `grant_type=client_credentials&scope=${asgardeoScopes}`;
+
+    TokenSwitchResponse|error response = asgardeoClient->post("/oauth2/token", requestBody, headers = headers);
+
+    if response is error {
+        log:printError(string`Error getting current access token: - ${response.detail().toString()}`);
+        return response;
+    }
+
+    log:printDebug("API Response - getCurrentAccessToken: " + response.toJsonString());
+    return response.access_token;
 }

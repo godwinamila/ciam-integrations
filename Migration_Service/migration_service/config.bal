@@ -6,7 +6,9 @@ configurable string asgardeoClientSecret = ?;
 
 
 // Configurable parameters.
-configurable string legacyIDPUrl = ?;
+configurable string legacyIDPBaseUrl = ?;
+configurable string legacyIDPClientId = ?;
+configurable string legacyIDPClientSecret = ?;
 
 // Asgardeo scopes to invoke the APIs.
 final string asgardeoScopes = "internal_user_mgt_view";
