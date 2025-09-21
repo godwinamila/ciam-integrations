@@ -49,11 +49,6 @@ type AuthenticationStatusRequest record {|
     readonly string username;
 |};
 
-type TokenSwitchResponse record {|
-    string access_token;
-    json...;
-|};
-
 type LegacyIdpErrorResponse record {|
     string error_description;
     string 'error?;

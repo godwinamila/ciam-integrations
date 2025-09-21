@@ -73,7 +73,11 @@ isolated function authenticateUser(User user) returns error? {
 
     // Create a new HTTP client to connect to the external IDP.
     final http:Client legacyIDPClient = check new (legacyIDPBaseUrl, {
-        timeout: 30
+        timeout: 30,
+        secureSocket: {
+            cert: legacyIDPCert,
+            verifyHostName: false
+        }
     });
 
     string credentials = string `${legacyIDPClientId}:${legacyIDPClientSecret}`;
@@ -140,26 +144,4 @@ isolated function authenticateUser(User user) returns error? {
         log:printError(string `Authentication failed for the user: ${user.id}.`);
         return error("Authentication failed");
     }
-}
-
-function getCurrentAccessToken() returns string|error {
-    string credentials = string `${asgardeoClientId}:${asgardeoClientSecret}`;
-    string encodedCredentials = credentials.toBytes().toBase64();
-
-    map<string|string[]> headers = {
-        "Authorization": string `Basic ${encodedCredentials}`,
-        "Content-Type": "application/x-www-form-urlencoded"
-    };
-
-    string requestBody = string `grant_type=client_credentials&scope=${asgardeoScopes}`;
-
-    TokenSwitchResponse|error response = asgardeoClient->post("/oauth2/token", requestBody, headers = headers);
-
-    if response is error {
-        log:printError(string`Error getting current access token: - ${response.detail().toString()}`);
-        return response;
-    }
-
-    log:printDebug("API Response - getCurrentAccessToken: " + response.toJsonString());
-    return response.access_token;
 }
