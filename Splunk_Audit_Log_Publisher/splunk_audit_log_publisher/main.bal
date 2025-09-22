@@ -1,21 +1,8 @@
 import ballerina/http;
-import ballerina/log;
-
-// Configure HTTP client with SSL settings for Splunk HEC
-http:ClientConfiguration clientConfig = {
-    timeout: 60,
-    secureSocket: {
-        cert: splunkServiceCert,
-        verifyHostName: false
-    } 
-};
-    
-
-// Initialize HTTP client for Splunk HEC with configuration
-final http:Client splunkClient = check new (splunkUrl, clientConfig);
+import ballerina/log; 
 
 // HTTP service to handle log requests
-service /logs on new http:Listener(8081) {
+service /logs on new http:Listener(8082) {
     
     resource function post .(http:Request request) returns http:Response|error {
         // Extract JSON payload from request
@@ -31,9 +18,13 @@ service /logs on new http:Listener(8081) {
         };
         
         // Forward the payload to Splunk HEC
-        http:Response|error splunkResponse = splunkClient->post(path = "/services/collector", 
-                                                               message = payload, 
-                                                               headers = headers);
+        http:Response|error splunkResponse = splunkClient->post(
+            path = "", 
+            message = {
+                "event": payload,
+                "sourcetype": "asagrdeo_audit_log"    
+            }, 
+            headers = headers);
         
         // Create response for the original caller
         http:Response response = new;
