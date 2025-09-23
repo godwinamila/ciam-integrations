@@ -8,20 +8,33 @@ public type InactiveUser record {|
 // Array type for inactive users response
 public type InactiveUsersResponse InactiveUser[];
 
-// Configuration for operation type
-public enum OperationType {
-    B2B_DELETE = "b2b_delete",
-    B2B_DISABLE = "b2b_disable",
-    B2B_LIST = "b2b_list",
-    B2C_DELETE = "b2c_delete",
-    B2C_DISABLE = "b2c_disable",
-    B2C_LIST = "b2c_list"
-}
-
 // Token API Response
 public type TokenResponse record {|
     string access_token;
     string scope;
     string token_type;
     int expires_in;
+|};
+
+// SCIM User patch operation for disabling
+public type ScimPatchOperation record {|
+    string op;
+    string path;
+    boolean value;
+|};
+
+// SCIM Patch request
+public type ScimPatchRequest record {|
+    string[] schemas;
+    ScimPatchOperation[] Operations;
+|};
+
+// Individual operation result with skipped users tracking
+public type OperationResult record {|
+    int totalUsers;
+    int successCount;
+    int failureCount;
+    int skippedCount;
+    string[] failedUsers;
+    string[] skippedUsers;
 |};
