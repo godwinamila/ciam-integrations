@@ -37,6 +37,15 @@ public type OrganizationResponse record {|
     anydata...;
 |};
 
+// NEW: Organization list response type
+public type OrganizationListResponse record {|
+    OrganizationResponse[] organizations;
+    int totalResults;
+    int startIndex;
+    int itemsPerPage;
+    anydata...;
+|};
+
 // Custom organization types for the facade
 public type ManagedOrgCreateRequest record {|
     string businessName;

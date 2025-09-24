@@ -4,6 +4,27 @@ import ballerina/log;
 // Service for custom organization management
 service /organizations on new http:Listener(8081) {
 
+    // LIST APIs
+    resource function get managedOrgs(int? 'limit = 10, int? offset = 0, boolean? recursive = false) returns CustomOrganizationResponse[]|http:Response|error {
+        return listManagedOrgs('limit, offset, recursive);
+    }
+
+    resource function get selfOrgs(int? 'limit = 10, int? offset = 0, boolean? recursive = false) returns CustomOrganizationResponse[]|http:Response|error {
+        return listSelfOrgs('limit, offset, recursive);
+    }
+
+    resource function get managedOrgs/[string parentOrgId]/subOrgs(int? 'limit = 10, int? offset = 0, boolean? recursive = false) returns CustomOrganizationResponse[]|http:Response|error {
+        return listSubOrgs(parentOrgId, 'limit, offset, recursive);
+    }
+
+    resource function get managedOrgs/[string parentOrgId]/sites(int? 'limit = 10, int? offset = 0, boolean? recursive = false) returns CustomOrganizationResponse[]|http:Response|error {
+        return listSitesInManagedOrg(parentOrgId, 'limit, offset, recursive);
+    }
+
+    resource function get selfOrgs/[string parentOrgId]/sites(int? 'limit = 10, int? offset = 0, boolean? recursive = false) returns CustomOrganizationResponse[]|http:Response|error {
+        return listSitesInSelfOrg(parentOrgId, 'limit, offset, recursive);
+    }
+
     // CREATE APIs
     resource function post managedOrgs(ManagedOrgCreateRequest request) returns CustomOrganizationResponse|http:Response|error {
         return createManagedOrg(request);
@@ -92,6 +113,127 @@ service /organizations on new http:Listener(8081) {
     resource function post selfOrgs/[string orgId]/upgrade(SelfOrgUpgradeRequest request) returns CustomOrganizationResponse|http:Response|error {
         return upgradeSelfOrgToManaged(orgId, request);
     }
+}
+
+// UPDATED LIST functions with server-side filtering
+function listManagedOrgs(int? 'limit, int? offset, boolean? recursive) returns CustomOrganizationResponse[]|http:Response|error {
+    string|error rootToken = getRootAccessToken();
+    if rootToken is error {
+        return createErrorResponse(500, "Failed to get root access token");
+    }
+
+    map<string|string[]> headers = {
+        "Authorization": string `Bearer ${rootToken}`
+    };
+
+    // Build query parameters with server-side filtering
+    string queryParams = buildFilteredQueryParams('limit, offset, recursive, "attributes.type+eq+abb-managed");
+    string endpoint = string `/api/server/v1/organizations${queryParams}`;
+
+    OrganizationListResponse|error response = asgardeoClient->get(endpoint, headers = headers);
+    if response is error {
+        log:printError("Error listing managed orgs", response);
+        return createErrorResponse(500, "Failed to list managed organizations");
+    }
+
+    // No client-side filtering needed - server already filtered by type
+    CustomOrganizationResponse[] customOrgs = [];
+    foreach OrganizationResponse org in response.organizations {
+        customOrgs.push(mapToCustomResponse(org, "abb-managed"));
+    }
+
+    return customOrgs;
+}
+
+function listSelfOrgs(int? 'limit, int? offset, boolean? recursive) returns CustomOrganizationResponse[]|http:Response|error {
+    string|error rootToken = getRootAccessToken();
+    if rootToken is error {
+        return createErrorResponse(500, "Failed to get root access token");
+    }
+
+    map<string|string[]> headers = {
+        "Authorization": string `Bearer ${rootToken}`
+    };
+
+    // Build query parameters with server-side filtering
+    string queryParams = buildFilteredQueryParams('limit, offset, recursive, "attributes.type+eq+self-managed");
+    string endpoint = string `/api/server/v1/organizations${queryParams}`;
+
+    OrganizationListResponse|error response = asgardeoClient->get(endpoint, headers = headers);
+    if response is error {
+        log:printError("Error listing self orgs", response);
+        return createErrorResponse(500, "Failed to list self-managed organizations");
+    }
+
+    // No client-side filtering needed - server already filtered by type
+    CustomOrganizationResponse[] customOrgs = [];
+    foreach OrganizationResponse org in response.organizations {
+        customOrgs.push(mapToCustomResponse(org, "self-managed"));
+    }
+
+    return customOrgs;
+}
+
+function listSubOrgs(string parentOrgId, int? 'limit, int? offset, boolean? recursive) returns CustomOrganizationResponse[]|http:Response|error {
+    string|error orgToken = switchToOrganizationToken(parentOrgId);
+    if orgToken is error {
+        return createErrorResponse(500, "Failed to switch to organization token");
+    }
+
+    map<string|string[]> headers = {
+        "Authorization": string `Bearer ${orgToken}`
+    };
+
+    // Build query parameters with server-side filtering
+    string queryParams = buildFilteredQueryParams('limit, offset, recursive, "attributes.type+eq+sub-org");
+    string endpoint = string `/o/api/server/v1/organizations${queryParams}`;
+
+    OrganizationListResponse|error response = asgardeoClient->get(endpoint, headers = headers);
+    if response is error {
+        log:printError("Error listing sub orgs", response);
+        return createErrorResponse(500, "Failed to list sub organizations");
+    }
+
+    // No client-side filtering needed - server already filtered by type
+    CustomOrganizationResponse[] customOrgs = [];
+    foreach OrganizationResponse org in response.organizations {
+        customOrgs.push(mapToCustomResponse(org, "sub-org"));
+    }
+
+    return customOrgs;
+}
+
+function listSitesInManagedOrg(string parentOrgId, int? 'limit, int? offset, boolean? recursive) returns CustomOrganizationResponse[]|http:Response|error {
+    string|error orgToken = switchToOrganizationToken(parentOrgId);
+    if orgToken is error {
+        return createErrorResponse(500, "Failed to switch to organization token");
+    }
+
+    map<string|string[]> headers = {
+        "Authorization": string `Bearer ${orgToken}`
+    };
+
+    // Build query parameters with server-side filtering
+    string queryParams = buildFilteredQueryParams('limit, offset, recursive, "attributes.type+eq+site");
+    string endpoint = string `/o/api/server/v1/organizations${queryParams}`;
+
+    OrganizationListResponse|error response = asgardeoClient->get(endpoint, headers = headers);
+    if response is error {
+        log:printError("Error listing sites in managed org", response);
+        return createErrorResponse(500, "Failed to list site organizations");
+    }
+
+    // No client-side filtering needed - server already filtered by type
+    CustomOrganizationResponse[] customOrgs = [];
+    foreach OrganizationResponse org in response.organizations {
+        customOrgs.push(mapToCustomResponse(org, "site"));
+    }
+
+    return customOrgs;
+}
+
+function listSitesInSelfOrg(string parentOrgId, int? 'limit, int? offset, boolean? recursive) returns CustomOrganizationResponse[]|http:Response|error {
+    return listSitesInManagedOrg(parentOrgId, 'limit, offset, recursive);
 }
 
 // CREATE functions
@@ -578,4 +720,58 @@ function createErrorResponse(int statusCode, string message) returns http:Respon
     response.statusCode = statusCode;
     response.setJsonPayload(errorResponse);
     return response;
+}
+
+// UPDATED HELPER FUNCTIONS FOR SERVER-SIDE FILTERING
+function buildFilteredQueryParams(int? 'limit, int? offset, boolean? recursive, string filter) returns string {
+    string[] params = [];
+    
+    // Add filter parameter
+    params.push(string `filter=${filter}`);
+    
+    if 'limit is int {
+        int limitValue = <int>'limit;
+        params.push(string `limit=${limitValue}`);
+    }
+    
+    if offset is int {
+        int offsetValue = <int>offset;
+        params.push(string `offset=${offsetValue}`);
+    }
+    
+    if recursive is boolean && recursive {
+        params.push("recursive=true");
+    }
+    
+    return "?" + string:'join("&", ...params);
+}
+
+// Keep the old function for backward compatibility (used in non-list operations)
+function buildQueryParams(int? 'limit, int? offset) returns string {
+    string[] params = [];
+    
+    if 'limit is int {
+        int limitValue = <int>'limit;
+        params.push(string `limit=${limitValue}`);
+    }
+    
+    if offset is int {
+        int offsetValue = <int>offset;
+        params.push(string `offset=${offsetValue}`);
+    }
+    
+    if params.length() > 0 {
+        return "?" + string:'join("&", ...params);
+    }
+    
+    return "";
+}
+
+function getAttributeValue(Attribute[] attributes, string key) returns string? {
+    foreach Attribute attr in attributes {
+        if attr.key == key {
+            return attr.value;
+        }
+    }
+    return ();
 }

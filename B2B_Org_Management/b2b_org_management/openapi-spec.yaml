@@ -9,7 +9,8 @@ info:
     - Sub-organizations
     - Site Organizations
     
-    The API handles token switching automatically for sub-organization operations.
+    The API handles token switching automatically for sub-organization operations and supports
+    server-side filtering with recursive search capabilities for efficient organization listing.
   version: 1.0.0
   contact:
     name: API Support
@@ -27,6 +28,44 @@ servers:
 paths:
   # Managed Organizations
   /organizations/managedOrgs:
+    get:
+      tags:
+        - Managed Organizations
+      summary: List all managed organizations
+      description: |
+        Retrieves a list of all ABB-managed organizations from the root level.
+        Uses server-side filtering for optimal performance and supports recursive search
+        to include organizations from the entire hierarchy.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Recursive'
+      responses:
+        '200':
+          description: List of managed organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomOrganizationResponse'
+              example:
+                - id: "org-12345-abcd-efgh"
+                  name: "ABB Manufacturing Ltd"
+                  orgType: "abb-managed"
+                  status: "ACTIVE"
+                  created: "2024-01-15T10:30:00Z"
+                  lastModified: "2024-01-15T10:30:00Z"
+                  hasChildren: true
+                  attributes:
+                    type: "abb-managed"
+                    GISGUID: "GIS-12345-ABB-001"
+                    BusinessName: "ABB Manufacturing Ltd"
+                    BusinessRegistrationNo: "REG-ABB-2024-001"
+                    Country: "Singapore"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
     post:
       tags:
         - Managed Organizations
@@ -122,6 +161,43 @@ paths:
 
   # Self-managed Organizations
   /organizations/selfOrgs:
+    get:
+      tags:
+        - Self-managed Organizations
+      summary: List all self-managed organizations
+      description: |
+        Retrieves a list of all self-managed organizations from the root level.
+        Uses server-side filtering for optimal performance and supports recursive search
+        to include organizations from the entire hierarchy.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Recursive'
+      responses:
+        '200':
+          description: List of self-managed organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomOrganizationResponse'
+              example:
+                - id: "org-67890-ijkl-mnop"
+                  name: "Independent Energy Solutions"
+                  orgType: "self-managed"
+                  status: "ACTIVE"
+                  created: "2024-01-16T14:20:00Z"
+                  lastModified: "2024-01-16T14:20:00Z"
+                  hasChildren: false
+                  attributes:
+                    type: "self-managed"
+                    BusinessName: "Independent Energy Solutions"
+                    BusinessRegistrationNo: "REG-IES-2024-002"
+                    Country: "Thailand"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
     post:
       tags:
         - Self-managed Organizations
@@ -246,6 +322,42 @@ paths:
 
   # Sub-organizations under Managed Organizations
   /organizations/managedOrgs/{parentOrgId}/subOrgs:
+    get:
+      tags:
+        - Sub Organizations
+      summary: List sub-organizations under a managed organization
+      description: |
+        Retrieves a list of all sub-organizations within a specific managed organization.
+        Uses server-side filtering and supports recursive search to include nested sub-organizations.
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Recursive'
+      responses:
+        '200':
+          description: List of sub-organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomOrganizationResponse'
+              example:
+                - id: "sub-org-12345-abcd"
+                  name: "ABB Robotics Division"
+                  orgType: "sub-org"
+                  status: "ACTIVE"
+                  created: "2024-01-17T09:15:00Z"
+                  lastModified: "2024-01-17T09:15:00Z"
+                  hasChildren: true
+                  attributes:
+                    type: "sub-org"
+                    BusinessEntityName: "ABB Robotics Division"
+                    Country: "Singapore"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
     post:
       tags:
         - Sub Organizations
@@ -344,11 +456,50 @@ paths:
 
   # Sites under Managed Organizations
   /organizations/managedOrgs/{parentOrgId}/sites:
+    get:
+      tags:
+        - Site Organizations
+      summary: List sites under a managed organization
+      description: |
+        Retrieves a list of all site organizations within a specific managed organization or sub-organization.
+        Uses server-side filtering and supports recursive search to include nested sites.
+        Note: This endpoint can be used with both managed organization IDs and sub-organization IDs as parentOrgId.
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Recursive'
+      responses:
+        '200':
+          description: List of site organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomOrganizationResponse'
+              example:
+                - id: "site-12345-abcd"
+                  name: "SITE-SG-001"
+                  orgType: "site"
+                  status: "ACTIVE"
+                  created: "2024-01-18T11:45:00Z"
+                  lastModified: "2024-01-18T11:45:00Z"
+                  hasChildren: false
+                  attributes:
+                    type: "site"
+                    SiteId: "SITE-SG-001"
+                    Location: "Jurong Industrial Estate, Singapore"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
     post:
       tags:
         - Site Organizations
       summary: Create a site under a managed organization
-      description: Creates a new site organization within a managed organization
+      description: |
+        Creates a new site organization within a managed organization or sub-organization.
+        Note: This endpoint can be used with both managed organization IDs and sub-organization IDs as parentOrgId.
       parameters:
         - $ref: '#/components/parameters/ParentOrgId'
       requestBody:
@@ -377,7 +528,9 @@ paths:
       tags:
         - Site Organizations
       summary: Get a site from a managed organization
-      description: Retrieves details of a specific site organization
+      description: |
+        Retrieves details of a specific site organization.
+        Note: This endpoint can be used with both managed organization IDs and sub-organization IDs as parentOrgId.
       parameters:
         - $ref: '#/components/parameters/ParentOrgId'
         - $ref: '#/components/parameters/OrgId'
@@ -397,7 +550,9 @@ paths:
       tags:
         - Site Organizations
       summary: Update a site in a managed organization
-      description: Updates attributes of a site organization
+      description: |
+        Updates attributes of a site organization.
+        Note: This endpoint can be used with both managed organization IDs and sub-organization IDs as parentOrgId.
       parameters:
         - $ref: '#/components/parameters/ParentOrgId'
         - $ref: '#/components/parameters/OrgId'
@@ -431,7 +586,9 @@ paths:
       tags:
         - Site Organizations
       summary: Delete a site from a managed organization
-      description: Deletes a site organization
+      description: |
+        Deletes a site organization.
+        Note: This endpoint can be used with both managed organization IDs and sub-organization IDs as parentOrgId.
       parameters:
         - $ref: '#/components/parameters/ParentOrgId'
         - $ref: '#/components/parameters/OrgId'
@@ -445,6 +602,30 @@ paths:
 
   # Sites under Self-managed Organizations
   /organizations/selfOrgs/{parentOrgId}/sites:
+    get:
+      tags:
+        - Site Organizations
+      summary: List sites under a self-managed organization
+      description: |
+        Retrieves a list of all site organizations within a specific self-managed organization.
+        Uses server-side filtering and supports recursive search to include nested sites.
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Recursive'
+      responses:
+        '200':
+          description: List of site organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomOrganizationResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
     post:
       tags:
         - Site Organizations
@@ -559,10 +740,43 @@ components:
       name: parentOrgId
       in: path
       required: true
-      description: The unique identifier of the parent organization
+      description: The unique identifier of the parent organization (can be managed org or sub-org ID)
       schema:
         type: string
         example: "parent-org-12345-abcd-efgh"
+
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of organizations to return
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+        example: 20
+
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Number of organizations to skip for pagination
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+        example: 0
+
+    Recursive:
+      name: recursive
+      in: query
+      required: false
+      description: Whether to include organizations from the entire hierarchy recursively
+      schema:
+        type: boolean
+        default: false
+        example: true
 
   schemas:
     ManagedOrgCreateRequest:
@@ -763,6 +977,7 @@ components:
           example:
             type: "abb-managed"
             GISGUID: "GIS-12345-ABB-001"
+            BusinessName: "ABB Manufacturing Ltd"
             BusinessRegistrationNo: "REG-ABB-2024-001"
             Country: "Singapore"
 
@@ -818,10 +1033,10 @@ components:
 
 tags:
   - name: Managed Organizations
-    description: Operations for ABB-managed organizations
+    description: Operations for ABB-managed organizations with GISGUID
   - name: Self-managed Organizations
-    description: Operations for self-managed organizations
+    description: Operations for self-managed organizations that can be upgraded to managed
   - name: Sub Organizations
     description: Operations for sub-organizations under managed organizations
   - name: Site Organizations
-    description: Operations for site organizations under both managed and self-managed organizations
+    description: Operations for site organizations (leaf nodes) under both managed and self-managed organizations
