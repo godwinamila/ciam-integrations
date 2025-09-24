@@ -293,6 +293,7 @@ function processUserProfileUpdatedEvent(json eventData, SecurityEventToken setPa
 
     boolean marketingConsentFound = false;
     boolean marketingConsentValue = false;
+    string? lastNameValue = ();
 
     // Process added claims
     UserClaim[]? addedClaims = updateEvent.user.addedClaims;
@@ -304,6 +305,8 @@ function processUserProfileUpdatedEvent(json eventData, SecurityEventToken setPa
             if claim.uri == "http://wso2.org/claims/marketing_consent" {
                 marketingConsentFound = true;
                 marketingConsentValue = formattedValue == "true";
+            } else if claim.uri == "http://wso2.org/claims/lastname" {
+                lastNameValue = formattedValue;
             }
         }
     }
@@ -318,6 +321,8 @@ function processUserProfileUpdatedEvent(json eventData, SecurityEventToken setPa
             if claim.uri == "http://wso2.org/claims/marketing_consent" {
                 marketingConsentFound = true;
                 marketingConsentValue = formattedValue == "true";
+            } else if claim.uri == "http://wso2.org/claims/lastname" {
+                lastNameValue = formattedValue;
             }
         }
     }
@@ -332,9 +337,10 @@ function processUserProfileUpdatedEvent(json eventData, SecurityEventToken setPa
     // Both required fields are present, proceed with Salesforce update
     log:printInfo("Marketing consent updated, syncing to Salesforce",
             userId = updateEvent.user.id,
-            marketingConsent = marketingConsentValue);
+            marketingConsent = marketingConsentValue,
+            lastName = lastNameValue);
 
-    error? updateResult = updateSalesforceMarketingConsent(asgardeoUserId, marketingConsentValue);
+    error? updateResult = updateSalesforceMarketingConsent(asgardeoUserId, marketingConsentValue, lastNameValue);
     if updateResult is error {
         log:printError("Failed to update marketing consent in Salesforce", updateResult);
         return updateResult;

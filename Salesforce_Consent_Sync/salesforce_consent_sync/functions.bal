@@ -102,33 +102,24 @@ function createSalesforceContact(RegistrationSuccessEvent regEvent) returns erro
         return createResponse;
     }
     
-    // Parse response
-    json|error responseJson = createResponse.getJsonPayload();
-    if responseJson is error {
-        log:printError("Failed to parse create response", responseJson);
-        return responseJson;
-    }
-    
-    // Check success
-    SalesforceCreateResponse|error createResult = responseJson.cloneWithType(SalesforceCreateResponse);
-    if createResult is error {
-        log:printError("Failed to parse create response", createResult);
-        return createResult;
-    }
-    
-    if createResult.success {
+    // Check response status code
+    int statusCode = createResponse.statusCode;
+    if statusCode == 200 || statusCode == 201 {
         log:printInfo("Successfully created contact in Salesforce", 
-                     contactId = createResult.id, 
+                     statusCode = statusCode,
                      asgardeoUserId = regEvent.user.id);
     } else {
+        json|error errorJson = createResponse.getJsonPayload();
+        string errorMessage = errorJson is json ? errorJson.toString() : "Unknown error";
         log:printError("Failed to create contact in Salesforce", 
-                      errors = createResult.errors.toString());
-        return error("Contact creation failed in Salesforce");
+                      statusCode = statusCode, 
+                      errorMessage = errorMessage);
+        return error(string `Contact creation failed with status code: ${statusCode}`);
     }
 }
 
 // Function to update marketing consent in Salesforce
-function updateSalesforceMarketingConsent(string asgardeoUserId, boolean marketingConsent) returns error? {
+function updateSalesforceMarketingConsent(string asgardeoUserId, boolean marketingConsent, string? lastName = ()) returns error? {
     
     // Get access token
     string|error accessToken = getSalesforceAccessToken();
@@ -136,10 +127,19 @@ function updateSalesforceMarketingConsent(string asgardeoUserId, boolean marketi
         return accessToken;
     }
     
-    // Create update request as JSON
+    // Create update request with only marketing consent
     json updateRequest = {
         "Marketing_consent__c": marketingConsent
     };
+    
+    // Only include LastName if explicitly provided
+    if lastName is string && lastName.trim() != "" {
+        updateRequest = {
+            "Marketing_consent__c": marketingConsent,
+            "LastName": lastName
+        };
+        log:printInfo("Including provided LastName in update", lastName = lastName);
+    }
     
     // Prepare HTTP request
     http:Request patchRequest = new;
@@ -155,12 +155,13 @@ function updateSalesforceMarketingConsent(string asgardeoUserId, boolean marketi
         return updateResponse;
     }
     
-    // Check response status
+    // Check response status - now includes 201 as successful
     int statusCode = updateResponse.statusCode;
-    if statusCode == 200 || statusCode == 204 {
+    if statusCode == 200 || statusCode == 201 || statusCode == 204 {
         log:printInfo("Successfully updated marketing consent in Salesforce", 
                      asgardeoUserId = asgardeoUserId, 
-                     marketingConsent = marketingConsent);
+                     marketingConsent = marketingConsent,
+                     statusCode = statusCode);
     } else {
         json|error errorJson = updateResponse.getJsonPayload();
         string errorMessage = errorJson is json ? errorJson.toString() : "Unknown error";
