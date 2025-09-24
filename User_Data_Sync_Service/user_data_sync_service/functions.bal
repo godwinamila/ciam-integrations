@@ -31,67 +31,6 @@ public function getAccessToken() returns string|error {
     return tokenData.access_token;
 }
 
-// Function to get Azure AD user object ID by UPN
-public function getAzureUserObjectId(string userPrincipalName, string accessToken) returns string|error {
-    
-    log:printInfo(string `Looking up Azure user object ID for UPN: ${userPrincipalName}`);
-
-    // Use $filter to find user by userPrincipalName
-    string filterQuery = string `userPrincipalName eq '${userPrincipalName}'`;
-    string encodedFilter = filterQuery; // In a real implementation, you might need URL encoding
-    
-    http:Response|error response = graphClient->get(path = string `/users?$filter=${encodedFilter}&$select=id,userPrincipalName`,
-        headers = {
-            "Authorization": string `Bearer ${accessToken}`,
-            "Content-Type": "application/json"
-        }
-    );
-
-    if response is error {
-        log:printError(string `HTTP error looking up user ${userPrincipalName}: ${response.message()}`);
-        return response;
-    }
-
-    if response.statusCode != 200 {
-        json|error errorPayload = response.getJsonPayload();
-        string errorMessage = errorPayload is json ? errorPayload.toString() : "Unknown error";
-        string logMessage = string `Failed to lookup user ${userPrincipalName}. Status: ${response.statusCode}, Error: ${errorMessage}`;
-        log:printError(logMessage);
-        return error(logMessage);
-    }
-
-    json|error userJson = response.getJsonPayload();
-    if userJson is error {
-        log:printError(string `Failed to parse user lookup response for ${userPrincipalName}: ${userJson.message()}`);
-        return userJson;
-    }
-
-    AzureUserSearchResponse|error searchResponse = userJson.cloneWithType();
-    if searchResponse is error {
-        log:printError(string `Failed to convert user search response for ${userPrincipalName}: ${searchResponse.message()}`);
-        return searchResponse;
-    }
-
-    // Check if user was found
-    AzureUserInfo[]? users = searchResponse.value;
-    if users is () || users.length() == 0 {
-        string notFoundMessage = string `User not found in Azure AD: ${userPrincipalName}`;
-        log:printError(notFoundMessage);
-        return error(notFoundMessage);
-    }
-
-    AzureUserInfo userInfo = users[0];
-    string? objectId = userInfo.id;
-    if objectId is () {
-        string noIdMessage = string `User found but no object ID returned for: ${userPrincipalName}`;
-        log:printError(noIdMessage);
-        return error(noIdMessage);
-    }
-
-    log:printInfo(string `Found Azure user object ID: ${objectId} for UPN: ${userPrincipalName}`);
-    return objectId;
-}
-
 // Function to create Azure AD user
 public function createAzureUser(AzureUserData userData, string accessToken) returns AzureUserResponse|error {
 
@@ -165,22 +104,15 @@ public function createAzureUser(AzureUserData userData, string accessToken) retu
     return createdUser;
 }
 
-// Function to update Azure AD user profile using object ID
+// Function to update Azure AD user profile using UPN
 public function updateAzureUserProfile(string asgardeoUserId, AzureUserUpdateRequest updateRequest, string accessToken) returns error? {
     
     // Construct Azure UPN from Asgardeo user ID
-    string azureUpn = asgardeoUserId + "#EXT#@" + issuerDomain;
+    string azureUpn = asgardeoUserId + "%23EXT%23@" + issuerDomain;
     
-    // Get the Azure AD object ID for the user
-    string|error objectId = getAzureUserObjectId(userPrincipalName = azureUpn, accessToken = accessToken);
-    if objectId is error {
-        log:printError(string `Failed to get object ID for user ${azureUpn}: ${objectId.message()}`);
-        return objectId;
-    }
-    
-    log:printInfo(string `Updating Azure user profile using object ID: ${objectId}`);
+    log:printInfo(string `Updating Azure user profile using UPN: ${azureUpn}`);
 
-    http:Response|error response = graphClient->patch(path = string `/users/${objectId}`,
+    http:Response|error response = graphClient->patch(path = string `/users/${azureUpn}`,
         message = updateRequest,
         headers = {
             "Authorization": string `Bearer ${accessToken}`,
@@ -189,38 +121,31 @@ public function updateAzureUserProfile(string asgardeoUserId, AzureUserUpdateReq
     );
 
     if response is error {
-        log:printError(string `HTTP error updating user ${objectId}: ${response.message()}`);
+        log:printError(string `HTTP error updating user ${azureUpn}: ${response.message()}`);
         return response;
     }
 
     if response.statusCode != 204 {
         json|error errorPayload = response.getJsonPayload();
         string errorMessage = errorPayload is json ? errorPayload.toString() : "Unknown error";
-        string logMessage = string `Failed to update user ${objectId}. Status: ${response.statusCode}, Error: ${errorMessage}`;
+        string logMessage = string `Failed to update user ${azureUpn}. Status: ${response.statusCode}, Error: ${errorMessage}`;
         log:printError(logMessage);
         return error(logMessage);
     }
 
-    log:printInfo(string `Successfully updated profile for user with object ID: ${objectId}`);
+    log:printInfo(string `Successfully updated profile for user: ${azureUpn}`);
     return;
 }
 
-// Function to delete Azure AD user using object ID
+// Function to delete Azure AD user using UPN
 public function deleteAzureUser(string asgardeoUserId, string accessToken) returns error? {
     
     // Construct Azure UPN from Asgardeo user ID
-    string azureUpn = asgardeoUserId + "#EXT#@" + issuerDomain;
+    string azureUpn = asgardeoUserId + "%23EXT%23@" + issuerDomain;
     
-    // Get the Azure AD object ID for the user
-    string|error objectId = getAzureUserObjectId(userPrincipalName = azureUpn, accessToken = accessToken);
-    if objectId is error {
-        log:printError(string `Failed to get object ID for user ${azureUpn}: ${objectId.message()}`);
-        return objectId;
-    }
-    
-    log:printInfo(string `Deleting Azure user using object ID: ${objectId}`);
+    log:printInfo(string `Deleting Azure user using UPN: ${azureUpn}`);
 
-    http:Response|error response = graphClient->delete(path = string `/users/${objectId}`,
+    http:Response|error response = graphClient->delete(path = string `/users/${azureUpn}`,
         headers = {
             "Authorization": string `Bearer ${accessToken}`,
             "Content-Type": "application/json"
@@ -228,18 +153,18 @@ public function deleteAzureUser(string asgardeoUserId, string accessToken) retur
     );
 
     if response is error {
-        log:printError(string `HTTP error deleting user ${objectId}: ${response.message()}`);
+        log:printError(string `HTTP error deleting user ${azureUpn}: ${response.message()}`);
         return response;
     }
 
     if response.statusCode != 204 {
         json|error errorPayload = response.getJsonPayload();
         string errorMessage = errorPayload is json ? errorPayload.toString() : "Unknown error";
-        string logMessage = string `Failed to delete user ${objectId}. Status: ${response.statusCode}, Error: ${errorMessage}`;
+        string logMessage = string `Failed to delete user ${azureUpn}. Status: ${response.statusCode}, Error: ${errorMessage}`;
         log:printError(logMessage);
         return error(logMessage);
     }
 
-    log:printInfo(string `Successfully deleted user with object ID: ${objectId}`);
+    log:printInfo(string `Successfully deleted user: ${azureUpn}`);
     return;
 }
