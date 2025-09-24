@@ -1,0 +1,8 @@
+[package]
+org = "dinika"
+name = "b2b_org_management"
+version = "0.1.0"
+title = "b2b_org_management"
+
+[build-options]
+sticky = true

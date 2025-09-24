@@ -1,0 +1,827 @@
+openapi: 3.0.3
+info:
+  title: B2B Organization Management API
+  description: |
+    A comprehensive API for managing different types of organizations in a B2B context.
+    This API provides a facade over Asgardeo organization management APIs to handle:
+    - Managed Organizations (ABB-managed)
+    - Self-managed Organizations
+    - Sub-organizations
+    - Site Organizations
+    
+    The API handles token switching automatically for sub-organization operations.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8081
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+paths:
+  # Managed Organizations
+  /organizations/managedOrgs:
+    post:
+      tags:
+        - Managed Organizations
+      summary: Create a new managed organization
+      description: Creates a new ABB-managed organization with GISGUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagedOrgCreateRequest'
+            example:
+              businessName: "ABB Manufacturing Ltd"
+              gisGuid: "GIS-12345-ABB-001"
+              businessRegistrationNo: "REG-ABB-2024-001"
+              country: "Singapore"
+      responses:
+        '200':
+          description: Managed organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organizations/managedOrgs/{orgId}:
+    get:
+      tags:
+        - Managed Organizations
+      summary: Get a managed organization
+      description: Retrieves details of a specific managed organization
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Managed organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Managed Organizations
+      summary: Update a managed organization
+      description: Updates attributes of a managed organization
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagedOrgPatchRequest'
+            example:
+              businessName: "ABB Manufacturing Pte Ltd"
+              country: "Malaysia"
+      responses:
+        '200':
+          description: Managed organization updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Managed Organizations
+      summary: Delete a managed organization
+      description: Deletes a managed organization
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '204':
+          description: Managed organization deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Self-managed Organizations
+  /organizations/selfOrgs:
+    post:
+      tags:
+        - Self-managed Organizations
+      summary: Create a new self-managed organization
+      description: Creates a new self-managed organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfOrgCreateRequest'
+            example:
+              businessName: "Independent Energy Solutions"
+              businessRegistrationNo: "REG-IES-2024-002"
+              country: "Thailand"
+      responses:
+        '200':
+          description: Self-managed organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organizations/selfOrgs/{orgId}:
+    get:
+      tags:
+        - Self-managed Organizations
+      summary: Get a self-managed organization
+      description: Retrieves details of a specific self-managed organization
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Self-managed organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Self-managed Organizations
+      summary: Update a self-managed organization
+      description: Updates attributes of a self-managed organization
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfOrgPatchRequest'
+            example:
+              businessName: "Independent Energy Solutions Ltd"
+              businessRegistrationNo: "REG-IES-2024-002-UPD"
+      responses:
+        '200':
+          description: Self-managed organization updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Self-managed Organizations
+      summary: Delete a self-managed organization
+      description: Deletes a self-managed organization
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '204':
+          description: Self-managed organization deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organizations/selfOrgs/{orgId}/upgrade:
+    post:
+      tags:
+        - Self-managed Organizations
+      summary: Upgrade self-managed organization to managed
+      description: Upgrades a self-managed organization to a managed organization by adding GISGUID
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfOrgUpgradeRequest'
+            example:
+              gisGuid: "GIS-12345-IES-001"
+      responses:
+        '200':
+          description: Organization upgraded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Sub-organizations under Managed Organizations
+  /organizations/managedOrgs/{parentOrgId}/subOrgs:
+    post:
+      tags:
+        - Sub Organizations
+      summary: Create a sub-organization under a managed organization
+      description: Creates a new sub-organization within a managed organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubOrgCreateRequest'
+            example:
+              businessEntityName: "ABB Robotics Division"
+              country: "Singapore"
+      responses:
+        '200':
+          description: Sub-organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organizations/managedOrgs/{parentOrgId}/subOrgs/{orgId}:
+    get:
+      tags:
+        - Sub Organizations
+      summary: Get a sub-organization
+      description: Retrieves details of a specific sub-organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Sub-organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Sub Organizations
+      summary: Update a sub-organization
+      description: Updates attributes of a sub-organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubOrgPatchRequest'
+            example:
+              businessEntityName: "ABB Advanced Robotics Division"
+              country: "Malaysia"
+      responses:
+        '200':
+          description: Sub-organization updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Sub Organizations
+      summary: Delete a sub-organization
+      description: Deletes a sub-organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '204':
+          description: Sub-organization deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Sites under Managed Organizations
+  /organizations/managedOrgs/{parentOrgId}/sites:
+    post:
+      tags:
+        - Site Organizations
+      summary: Create a site under a managed organization
+      description: Creates a new site organization within a managed organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteOrgCreateRequest'
+            example:
+              siteId: "SITE-SG-001"
+              location: "Jurong Industrial Estate, Singapore"
+      responses:
+        '200':
+          description: Site organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organizations/managedOrgs/{parentOrgId}/sites/{orgId}:
+    get:
+      tags:
+        - Site Organizations
+      summary: Get a site from a managed organization
+      description: Retrieves details of a specific site organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Site organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Site Organizations
+      summary: Update a site in a managed organization
+      description: Updates attributes of a site organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteOrgPatchRequest'
+            example:
+              siteId: "SITE-SG-001-UPD"
+              location: "Tuas Industrial Estate, Singapore"
+              region: "Southeast Asia"
+              country: "Singapore"
+              city: "Singapore"
+      responses:
+        '200':
+          description: Site organization updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Site Organizations
+      summary: Delete a site from a managed organization
+      description: Deletes a site organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '204':
+          description: Site organization deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # Sites under Self-managed Organizations
+  /organizations/selfOrgs/{parentOrgId}/sites:
+    post:
+      tags:
+        - Site Organizations
+      summary: Create a site under a self-managed organization
+      description: Creates a new site organization within a self-managed organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteOrgCreateRequest'
+            example:
+              siteId: "SITE-TH-001"
+              location: "Bangkok Industrial Park, Thailand"
+      responses:
+        '200':
+          description: Site organization created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /organizations/selfOrgs/{parentOrgId}/sites/{orgId}:
+    get:
+      tags:
+        - Site Organizations
+      summary: Get a site from a self-managed organization
+      description: Retrieves details of a specific site organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Site organization details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Site Organizations
+      summary: Update a site in a self-managed organization
+      description: Updates attributes of a site organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteOrgPatchRequest'
+            example:
+              siteId: "SITE-TH-001-UPD"
+              location: "Rayong Industrial Estate, Thailand"
+              region: "Southeast Asia"
+              country: "Thailand"
+              city: "Rayong"
+      responses:
+        '200':
+          description: Site organization updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Site Organizations
+      summary: Delete a site from a self-managed organization
+      description: Deletes a site organization
+      parameters:
+        - $ref: '#/components/parameters/ParentOrgId'
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '204':
+          description: Site organization deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    OrgId:
+      name: orgId
+      in: path
+      required: true
+      description: The unique identifier of the organization
+      schema:
+        type: string
+        example: "org-12345-abcd-efgh"
+
+    ParentOrgId:
+      name: parentOrgId
+      in: path
+      required: true
+      description: The unique identifier of the parent organization
+      schema:
+        type: string
+        example: "parent-org-12345-abcd-efgh"
+
+  schemas:
+    ManagedOrgCreateRequest:
+      type: object
+      required:
+        - businessName
+        - gisGuid
+        - businessRegistrationNo
+        - country
+      properties:
+        businessName:
+          type: string
+          description: The business name of the managed organization
+          example: "ABB Manufacturing Ltd"
+        gisGuid:
+          type: string
+          description: The GIS GUID for the managed organization
+          example: "GIS-12345-ABB-001"
+        businessRegistrationNo:
+          type: string
+          description: The business registration number
+          example: "REG-ABB-2024-001"
+        country:
+          type: string
+          description: The country where the organization is located
+          example: "Singapore"
+
+    SelfOrgCreateRequest:
+      type: object
+      required:
+        - businessName
+        - businessRegistrationNo
+        - country
+      properties:
+        businessName:
+          type: string
+          description: The business name of the self-managed organization
+          example: "Independent Energy Solutions"
+        businessRegistrationNo:
+          type: string
+          description: The business registration number
+          example: "REG-IES-2024-002"
+        country:
+          type: string
+          description: The country where the organization is located
+          example: "Thailand"
+
+    SubOrgCreateRequest:
+      type: object
+      required:
+        - businessEntityName
+        - country
+      properties:
+        businessEntityName:
+          type: string
+          description: The business entity name of the sub-organization
+          example: "ABB Robotics Division"
+        country:
+          type: string
+          description: The country where the sub-organization is located
+          example: "Singapore"
+
+    SiteOrgCreateRequest:
+      type: object
+      required:
+        - siteId
+        - location
+      properties:
+        siteId:
+          type: string
+          description: The unique identifier for the site
+          example: "SITE-SG-001"
+        location:
+          type: string
+          description: The physical location of the site
+          example: "Jurong Industrial Estate, Singapore"
+
+    ManagedOrgPatchRequest:
+      type: object
+      properties:
+        businessName:
+          type: string
+          description: Updated business name
+          example: "ABB Manufacturing Pte Ltd"
+        gisGuid:
+          type: string
+          description: Updated GIS GUID
+          example: "GIS-12345-ABB-002"
+        businessRegistrationNo:
+          type: string
+          description: Updated business registration number
+          example: "REG-ABB-2024-001-UPD"
+        country:
+          type: string
+          description: Updated country
+          example: "Malaysia"
+
+    SelfOrgPatchRequest:
+      type: object
+      properties:
+        businessName:
+          type: string
+          description: Updated business name
+          example: "Independent Energy Solutions Ltd"
+        businessRegistrationNo:
+          type: string
+          description: Updated business registration number
+          example: "REG-IES-2024-002-UPD"
+        country:
+          type: string
+          description: Updated country
+          example: "Vietnam"
+
+    SubOrgPatchRequest:
+      type: object
+      properties:
+        businessEntityName:
+          type: string
+          description: Updated business entity name
+          example: "ABB Advanced Robotics Division"
+        country:
+          type: string
+          description: Updated country
+          example: "Malaysia"
+
+    SiteOrgPatchRequest:
+      type: object
+      properties:
+        siteId:
+          type: string
+          description: Updated site ID
+          example: "SITE-SG-001-UPD"
+        region:
+          type: string
+          description: Updated region
+          example: "Southeast Asia"
+        country:
+          type: string
+          description: Updated country
+          example: "Singapore"
+        city:
+          type: string
+          description: Updated city
+          example: "Singapore"
+        location:
+          type: string
+          description: Updated location
+          example: "Tuas Industrial Estate, Singapore"
+
+    SelfOrgUpgradeRequest:
+      type: object
+      required:
+        - gisGuid
+      properties:
+        gisGuid:
+          type: string
+          description: The GIS GUID to assign when upgrading to managed organization
+          example: "GIS-12345-IES-001"
+
+    CustomOrganizationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier of the organization
+          example: "org-12345-abcd-efgh"
+        name:
+          type: string
+          description: The name of the organization
+          example: "ABB Manufacturing Ltd"
+        orgType:
+          type: string
+          description: The type of organization
+          enum: ["abb-managed", "self-managed", "sub-org", "site"]
+          example: "abb-managed"
+        status:
+          type: string
+          description: The status of the organization
+          example: "ACTIVE"
+        created:
+          type: string
+          format: date-time
+          description: The creation timestamp
+          example: "2024-01-15T10:30:00Z"
+        lastModified:
+          type: string
+          format: date-time
+          description: The last modification timestamp
+          example: "2024-01-15T10:30:00Z"
+        hasChildren:
+          type: boolean
+          description: Whether the organization has child organizations
+          example: true
+        attributes:
+          type: object
+          description: Additional attributes specific to the organization type
+          additionalProperties: true
+          example:
+            type: "abb-managed"
+            GISGUID: "GIS-12345-ABB-001"
+            BusinessRegistrationNo: "REG-ABB-2024-001"
+            Country: "Singapore"
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "ORG-404"
+        message:
+          type: string
+          description: Error message
+          example: "Organization not found"
+        description:
+          type: string
+          description: Detailed error description
+          example: "The requested organization with ID 'org-12345' does not exist"
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "ORG-400"
+            message: "Invalid request parameters"
+            description: "Required field 'businessName' is missing"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "ORG-404"
+            message: "Organization not found"
+            description: "The requested organization does not exist"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "ORG-500"
+            message: "Internal server error"
+            description: "An unexpected error occurred while processing the request"
+
+tags:
+  - name: Managed Organizations
+    description: Operations for ABB-managed organizations
+  - name: Self-managed Organizations
+    description: Operations for self-managed organizations
+  - name: Sub Organizations
+    description: Operations for sub-organizations under managed organizations
+  - name: Site Organizations
+    description: Operations for site organizations under both managed and self-managed organizations
