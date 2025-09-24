@@ -1,0 +1,8 @@
+[package]
+org = "dinika"
+name = "salesforce_consent_sync"
+version = "0.1.0"
+title = "salesforce_consent_sync"
+
+[build-options]
+sticky = true

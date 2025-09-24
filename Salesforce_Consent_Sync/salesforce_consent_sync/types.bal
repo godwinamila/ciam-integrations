@@ -1,0 +1,132 @@
+// Security Event Token (SET) payload structure
+public type SecurityEventToken record {|
+    string iss; // Issuer
+    int iat; // Issued At timestamp
+    string jti; // JWT ID
+    map<json> events; // Events object with dynamic keys
+    anydata...;
+|};
+
+// Registration success event data
+public type RegistrationSuccessEvent record {|
+    string initiatorType;
+    RegistrationUserInfo user;
+    TenantInfo tenant;
+    UserStoreInfo userStore;
+    string action;
+    anydata...;
+|};
+
+// User profile updated event data
+public type UserProfileUpdatedEvent record {|
+    string initiatorType;
+    ProfileUpdateUserInfo user;
+    TenantInfo tenant;
+    UserStoreInfo userStore;
+    string action;
+    anydata...;
+|};
+
+// User deleted event data
+public type UserDeletedEvent record {|
+    string initiatorType;
+    RegistrationUserInfo user;
+    TenantInfo tenant;
+    UserStoreInfo userStore;
+    anydata...;
+|};
+
+// User info for registration events
+public type RegistrationUserInfo record {|
+    string id;
+    string ref;
+    UserClaim[] claims;
+    anydata...;
+|};
+
+// User info for profile update events
+public type ProfileUpdateUserInfo record {|
+    string id;
+    string ref;
+    UserClaim[] addedClaims?;
+    UserClaim[] updatedClaims?;
+    anydata...;
+|};
+
+// User claim structure - value can be string or string array
+public type UserClaim record {|
+    string uri;
+    string|string[] value;
+    anydata...;
+|};
+
+// Tenant info structure
+public type TenantInfo record {
+    string id;
+    string name;
+};
+
+// User store info structure
+public type UserStoreInfo record {
+    string id;
+    string name;
+};
+
+// Webhook response
+public type WebhookResponse record {
+    string message;
+    boolean success;
+};
+
+// Webhook subscription verification parameters
+public type SubscriptionVerification record {
+    string hubMode;
+    string hubTopic;
+    string hubChallenge;
+    string hubLeaseSeconds;
+};
+
+// SF user creation request
+public type SFContactRequest record {
+    string FirstName?;
+    string LastName?;
+    string Email?;
+    string MobilePhone?;
+    string Marketing_consent__c?;
+    string Asgardeo_user_id__c?;
+};
+
+// SF user profile update request
+public type SFContactUpdateRequest record {
+    string FirstName?;
+    string LastName?;
+    string Email?;
+    string MobilePhone?;
+    string Marketing_consent__c?;
+};
+
+// Salesforce create response
+public type SalesforceCreateResponse record {
+    string id;
+    boolean success;
+    json[] errors;
+};
+
+// Salesforce update response
+public type SalesforceUpdateResponse record {
+    string id;
+    boolean success;
+    json[] errors;
+    boolean created;
+};
+
+// Salesforce token response
+public type SalesforceTokenResponse record {
+    string access_token;
+    string signature;
+    string scope;
+    string instance_url;
+    string id;
+    string token_type;
+    string issued_at;
+};
