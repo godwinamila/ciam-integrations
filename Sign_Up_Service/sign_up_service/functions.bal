@@ -430,7 +430,7 @@ function checkOrganizationExists(string businessName) returns Organization?|erro
         return accessToken;
     }
 
-    string filterQuery = string `filter=attributes.business-name+eq+${businessName}`;
+    string filterQuery = string `filter=attributes.BusinessName+eq+${businessName}`;
     string endpoint = string `/api/server/v1/organizations?${filterQuery}`;
 
     map<string|string[]> headers = {
@@ -469,24 +469,24 @@ function createOrganization(string businessName, string organizationName, string
     // Build attributes array dynamically
     OrganizationAttribute[] attributes = [
         {
-            key: "business-name",
+            key: "BusinessName",
             value: businessName
         },
         {
             key: "type",
-            value: "self-managed-org"
+            value: "self-managed"
         }
     ];
 
-    // Conditionally add account-number attribute only if registeredBusinessNumber exists
+    // Conditionally add BusinessRegistrationNo attribute only if registeredBusinessNumber exists
     if (registeredBusinessNumber is string) {
         string trimmedBusinessNumber = registeredBusinessNumber.trim();
         if trimmedBusinessNumber.length() > 0 {
             attributes.push({
-                key: "account-number",
+                key: "BusinessRegistrationNo",
                 value: trimmedBusinessNumber
             });
-            log:printInfo("Added account-number attribute with value: " + trimmedBusinessNumber);
+            log:printInfo("Added BusinessRegistrationNo attribute with value: " + trimmedBusinessNumber);
         }
     }
 
