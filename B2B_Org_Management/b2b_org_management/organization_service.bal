@@ -1067,21 +1067,6 @@ function patchSiteInManagedOrg(string parentOrgId, string orgId, SiteOrgPatchReq
         patchOps.push({operation: "REPLACE", path: "/attributes/SiteId", value: siteId});
     }
 
-    if request.region is string {
-        string region = <string>request.region;
-        patchOps.push({operation: "REPLACE", path: "/attributes/Region", value: region});
-    }
-
-    if request.country is string {
-        string country = <string>request.country;
-        patchOps.push({operation: "REPLACE", path: "/attributes/Country", value: country});
-    }
-
-    if request.city is string {
-        string city = <string>request.city;
-        patchOps.push({operation: "REPLACE", path: "/attributes/City", value: city});
-    }
-
     if request.location is string {
         string location = <string>request.location;
         patchOps.push({operation: "REPLACE", path: "/attributes/Location", value: location});
@@ -1137,22 +1122,7 @@ function patchSiteInSelfOrg(string parentOrgId, string orgId, SiteOrgPatchReques
         patchOps.push({operation: "REPLACE", path: "/name", value: siteId});
         patchOps.push({operation: "REPLACE", path: "/attributes/SiteId", value: siteId});
     }
-
-    if request.region is string {
-        string region = <string>request.region;
-        patchOps.push({operation: "REPLACE", path: "/attributes/Region", value: region});
-    }
-
-    if request.country is string {
-        string country = <string>request.country;
-        patchOps.push({operation: "REPLACE", path: "/attributes/Country", value: country});
-    }
-
-    if request.city is string {
-        string city = <string>request.city;
-        patchOps.push({operation: "REPLACE", path: "/attributes/City", value: city});
-    }
-
+    
     if request.location is string {
         string location = <string>request.location;
         patchOps.push({operation: "REPLACE", path: "/attributes/Location", value: location});

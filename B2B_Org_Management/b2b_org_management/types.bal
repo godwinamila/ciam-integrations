@@ -99,9 +99,6 @@ public type SubOrgPatchRequest record {|
 
 public type SiteOrgPatchRequest record {|
     string? siteId = ();
-    string? region = ();
-    string? country = ();
-    string? city = ();
     string? location = ();
 |};
 
