@@ -30,20 +30,28 @@ public type OrganizationResponse record {|
     string name;
     string? description = ();
     string status;
-    string created;
-    string lastModified;
     boolean hasChildren;
     Attribute[] attributes;
     anydata...;
 |};
 
-// NEW: Organization list response type
+// Pagination link type
+public type PaginationLink record {|
+    string href;
+    string rel;
+|};
+
+// Organization list response type with pagination links - handles empty responses
 public type OrganizationListResponse record {|
-    OrganizationResponse[] organizations;
-    int totalResults;
-    int startIndex;
-    int itemsPerPage;
+    OrganizationResponse[]? organizations = ();
+    PaginationLink[]? links = ();
     anydata...;
+|};
+
+// Custom list response with pagination
+public type CustomOrganizationListResponse record {|
+    CustomOrganizationResponse[] organizations;
+    PaginationLink[]? links = ();
 |};
 
 // Custom organization types for the facade
@@ -103,8 +111,6 @@ public type CustomOrganizationResponse record {|
     string name;
     string orgType;
     string status;
-    string created;
-    string lastModified;
     boolean hasChildren;
     record {} attributes;
 |};

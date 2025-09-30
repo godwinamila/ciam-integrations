@@ -1,0 +1,1225 @@
+openapi: 3.0.1
+info:
+  title: Organizations
+  version: 0.1.0
+servers:
+- url: "{server}:{port}/organizations"
+  variables:
+    server:
+      default: http://localhost
+    port:
+      default: "8081"
+paths:
+  /managedOrgs:
+    get:
+      operationId: getManagedorgs
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int64
+          nullable: true
+          default: 10
+      - name: after
+        in: query
+        schema:
+          type: string
+          nullable: true
+      - name: before
+        in: query
+        schema:
+          type: string
+          nullable: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationListResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    post:
+      operationId: postManagedorgs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagedOrgCreateRequest'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /managedOrgs/{parentOrgId}/subOrgs:
+    get:
+      operationId: getManagedorgsParentorgidSuborgs
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int64
+          nullable: true
+          default: 10
+      - name: after
+        in: query
+        schema:
+          type: string
+          nullable: true
+      - name: before
+        in: query
+        schema:
+          type: string
+          nullable: true
+      - name: recursive
+        in: query
+        schema:
+          type: boolean
+          nullable: true
+          default: false
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationListResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    post:
+      operationId: postManagedorgsParentorgidSuborgs
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubOrgCreateRequest'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /managedOrgs/{parentOrgId}/sites:
+    get:
+      operationId: getManagedorgsParentorgidSites
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int64
+          nullable: true
+          default: 10
+      - name: after
+        in: query
+        schema:
+          type: string
+          nullable: true
+      - name: before
+        in: query
+        schema:
+          type: string
+          nullable: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationListResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    post:
+      operationId: postManagedorgsParentorgidSites
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteOrgCreateRequest'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /managedOrgs/{orgId}:
+    get:
+      operationId: getManagedorgsOrgid
+      parameters:
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    delete:
+      operationId: deleteManagedorgsOrgid
+      parameters:
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    patch:
+      operationId: patchManagedorgsOrgid
+      parameters:
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagedOrgPatchRequest'
+        required: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /managedOrgs/{parentOrgId}/subOrgs/{orgId}:
+    get:
+      operationId: getManagedorgsParentorgidSuborgsOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    delete:
+      operationId: deleteManagedorgsParentorgidSuborgsOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    patch:
+      operationId: patchManagedorgsParentorgidSuborgsOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubOrgPatchRequest'
+        required: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /managedOrgs/{parentOrgId}/sites/{orgId}:
+    get:
+      operationId: getManagedorgsParentorgidSitesOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    delete:
+      operationId: deleteManagedorgsParentorgidSitesOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    patch:
+      operationId: patchManagedorgsParentorgidSitesOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteOrgPatchRequest'
+        required: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /selfOrgs:
+    get:
+      operationId: getSelforgs
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int64
+          nullable: true
+          default: 10
+      - name: after
+        in: query
+        schema:
+          type: string
+          nullable: true
+      - name: before
+        in: query
+        schema:
+          type: string
+          nullable: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationListResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    post:
+      operationId: postSelforgs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfOrgCreateRequest'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /selfOrgs/{parentOrgId}/sites:
+    get:
+      operationId: getSelforgsParentorgidSites
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          format: int64
+          nullable: true
+          default: 10
+      - name: after
+        in: query
+        schema:
+          type: string
+          nullable: true
+      - name: before
+        in: query
+        schema:
+          type: string
+          nullable: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationListResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    post:
+      operationId: postSelforgsParentorgidSites
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteOrgCreateRequest'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /selfOrgs/{orgId}:
+    get:
+      operationId: getSelforgsOrgid
+      parameters:
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    delete:
+      operationId: deleteSelforgsOrgid
+      parameters:
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    patch:
+      operationId: patchSelforgsOrgid
+      parameters:
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfOrgPatchRequest'
+        required: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /selfOrgs/{parentOrgId}/sites/{orgId}:
+    get:
+      operationId: getSelforgsParentorgidSitesOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    delete:
+      operationId: deleteSelforgsParentorgidSitesOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    patch:
+      operationId: patchSelforgsParentorgidSitesOrgid
+      parameters:
+      - name: parentOrgId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteOrgPatchRequest'
+        required: true
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+  /selfOrgs/{orgId}/upgrade:
+    post:
+      operationId: postSelforgsOrgidUpgrade
+      parameters:
+      - name: orgId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfOrgUpgradeRequest'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomOrganizationResponse'
+        default:
+          description: Any Response
+          content:
+            '*/*':
+              schema:
+                description: Any type of entity body
+        "500":
+          description: InternalServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "400":
+          description: BadRequest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+components:
+  schemas:
+    CustomOrganizationListResponse:
+      required:
+      - organizations
+      type: object
+      properties:
+        organizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomOrganizationResponse'
+        links:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/PaginationLink'
+      additionalProperties: false
+    CustomOrganizationResponse:
+      required:
+      - attributes
+      - hasChildren
+      - id
+      - name
+      - orgType
+      - status
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        orgType:
+          type: string
+        status:
+          type: string
+        hasChildren:
+          type: boolean
+        attributes:
+          type: object
+          properties: {}
+      additionalProperties: false
+    ErrorPayload:
+      required:
+      - message
+      - method
+      - path
+      - reason
+      - status
+      - timestamp
+      type: object
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int64
+        reason:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        method:
+          type: string
+    ManagedOrgCreateRequest:
+      required:
+      - businessName
+      - businessRegistrationNo
+      - country
+      - gisGuid
+      type: object
+      properties:
+        businessName:
+          type: string
+        gisGuid:
+          type: string
+        businessRegistrationNo:
+          type: string
+        country:
+          type: string
+      additionalProperties: false
+    ManagedOrgPatchRequest:
+      type: object
+      properties:
+        businessName:
+          type: string
+          nullable: true
+        gisGuid:
+          type: string
+          nullable: true
+        businessRegistrationNo:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+      additionalProperties: false
+    PaginationLink:
+      required:
+      - href
+      - rel
+      type: object
+      properties:
+        href:
+          type: string
+        rel:
+          type: string
+      additionalProperties: false
+    SelfOrgCreateRequest:
+      required:
+      - businessName
+      - businessRegistrationNo
+      - country
+      type: object
+      properties:
+        businessName:
+          type: string
+        businessRegistrationNo:
+          type: string
+        country:
+          type: string
+      additionalProperties: false
+    SelfOrgPatchRequest:
+      type: object
+      properties:
+        businessName:
+          type: string
+          nullable: true
+        businessRegistrationNo:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+      additionalProperties: false
+    SelfOrgUpgradeRequest:
+      required:
+      - gisGuid
+      type: object
+      properties:
+        gisGuid:
+          type: string
+      additionalProperties: false
+    SiteOrgCreateRequest:
+      required:
+      - location
+      - siteId
+      type: object
+      properties:
+        siteId:
+          type: string
+        location:
+          type: string
+      additionalProperties: false
+    SiteOrgPatchRequest:
+      type: object
+      properties:
+        siteId:
+          type: string
+          nullable: true
+        region:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+      additionalProperties: false
+    SubOrgCreateRequest:
+      required:
+      - businessEntityName
+      - country
+      type: object
+      properties:
+        businessEntityName:
+          type: string
+        country:
+          type: string
+      additionalProperties: false
+    SubOrgPatchRequest:
+      type: object
+      properties:
+        businessEntityName:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+      additionalProperties: false
