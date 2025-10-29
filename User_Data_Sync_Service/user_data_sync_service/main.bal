@@ -132,34 +132,34 @@ service / on webhookListener {
         // Log the incoming event payload
         string payloadString = payload.toJsonString();
         //log:printInfo("Received webhook event payload", eventPayload = payloadString);
-        log:printInfo("######################## Received webhook event payload : " + payloadString);
+        log:printInfo("############################# Received webhook event payload : " + eventPayload);
 
         // Convert JSON to SecurityEventToken record
-        // SecurityEventToken|error setPayload = payload.cloneWithType(SecurityEventToken);
-        // if setPayload is error {
-        //     log:printError("Failed to parse Security Event Token", setPayload);
-        //     WebhookResponse errorResponse = {
-        //         message: "Invalid Security Event Token format",
-        //         success: false
-        //     };
-        //     check caller->respond(errorResponse);
-        //     return;
-        // }
+        SecurityEventToken|error setPayload = payload.cloneWithType(SecurityEventToken);
+        if setPayload is error {
+            log:printError("Failed to parse Security Event Token", setPayload);
+            WebhookResponse errorResponse = {
+                message: "Invalid Security Event Token format",
+                success: false
+            };
+            check caller->respond(errorResponse);
+            return;
+        }
 
-        // // Process the Security Event Token
-        // error? processResult = processSecurityEventToken(setPayload);
-        // if processResult is error {
-        //     log:printError("Failed to process Security Event Token", processResult);
-        //     WebhookResponse errorResponse = {
-        //         message: "Failed to process webhook event",
-        //         success: false
-        //     };
-        //     http:InternalServerError serverError = {
-        //         body: errorResponse
-        //     };
-        //     check caller->respond(serverError);
-        //     return;
-        // }
+        // Process the Security Event Token
+        error? processResult = processSecurityEventToken(setPayload);
+        if processResult is error {
+            log:printError("Failed to process Security Event Token", processResult);
+            WebhookResponse errorResponse = {
+                message: "Failed to process webhook event",
+                success: false
+            };
+            http:InternalServerError serverError = {
+                body: errorResponse
+            };
+            check caller->respond(serverError);
+            return;
+        }
 
         // Send success response
         WebhookResponse successResponse = {
@@ -226,20 +226,20 @@ function processSecurityEventToken(SecurityEventToken setPayload) returns error?
 // Function to process events based on their type URL
 function processEventByType(string eventType, json eventData, SecurityEventToken setPayload) returns error? {
 
-    //log:printInfo("Processing event", eventType = eventType);
-    log:printInfo("###########Processing event : " + eventType);
+    log:printInfo("Processing event", eventType = eventType);
+    log:printInfo("###########################Processing event" + eventType);
 
-    // // Process registration success, user profile update, and user delete events
-    // if eventType.includes("registrationSuccess") {
-    // // if eventType.includes("userCreated") {
-    //     check processUserCreatedEvent(eventData, setPayload);
-    // } else if eventType.includes("userProfileUpdated") {
-    //     check processUserProfileUpdatedEvent(eventData, setPayload);
-    // } else if eventType.includes("userDeleted") {
-    //     check processUserDeletedEvent(eventData, setPayload);
-    // } else {
-    //     log:printInfo("Ignoring unsupported event type", eventType = eventType);
-    // }
+    // Process registration success, user profile update, and user delete events
+    if eventType.includes("registrationSuccess") {
+    // if eventType.includes("userCreated") {
+        check processUserCreatedEvent(eventData, setPayload);
+    } else if eventType.includes("userProfileUpdated") {
+        check processUserProfileUpdatedEvent(eventData, setPayload);
+    } else if eventType.includes("userDeleted") {
+        check processUserDeletedEvent(eventData, setPayload);
+    } else {
+        log:printInfo("Ignoring unsupported event type", eventType = eventType);
+    }
 }
 
 // Helper function to format claim value for logging
