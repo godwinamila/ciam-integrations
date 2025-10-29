@@ -225,20 +225,20 @@ function processSecurityEventToken(SecurityEventToken setPayload) returns error?
 // Function to process events based on their type URL
 function processEventByType(string eventType, json eventData, SecurityEventToken setPayload) returns error? {
 
-    log:printInfo("Processing event", eventType = eventType);
+    //log:printInfo("Processing event", eventType = eventType);
     log:printInfo("###########Processing event : " + eventType);
 
-    // Process registration success, user profile update, and user delete events
-    if eventType.includes("registrationSuccess") {
-    // if eventType.includes("userCreated") {
-        check processUserCreatedEvent(eventData, setPayload);
-    } else if eventType.includes("userProfileUpdated") {
-        check processUserProfileUpdatedEvent(eventData, setPayload);
-    } else if eventType.includes("userDeleted") {
-        check processUserDeletedEvent(eventData, setPayload);
-    } else {
-        log:printInfo("Ignoring unsupported event type", eventType = eventType);
-    }
+    // // Process registration success, user profile update, and user delete events
+    // if eventType.includes("registrationSuccess") {
+    // // if eventType.includes("userCreated") {
+    //     check processUserCreatedEvent(eventData, setPayload);
+    // } else if eventType.includes("userProfileUpdated") {
+    //     check processUserProfileUpdatedEvent(eventData, setPayload);
+    // } else if eventType.includes("userDeleted") {
+    //     check processUserDeletedEvent(eventData, setPayload);
+    // } else {
+    //     log:printInfo("Ignoring unsupported event type", eventType = eventType);
+    // }
 }
 
 // Helper function to format claim value for logging
