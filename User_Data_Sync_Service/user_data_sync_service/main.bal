@@ -131,34 +131,35 @@ service / on webhookListener {
 
         // Log the incoming event payload
         string payloadString = payload.toJsonString();
-        log:printInfo("Received webhook event payload", eventPayload = payloadString);
+        //log:printInfo("Received webhook event payload", eventPayload = payloadString);
+        log:printInfo("######################## Received webhook event payload : " + payloadString);
 
         // Convert JSON to SecurityEventToken record
-        SecurityEventToken|error setPayload = payload.cloneWithType(SecurityEventToken);
-        if setPayload is error {
-            log:printError("Failed to parse Security Event Token", setPayload);
-            WebhookResponse errorResponse = {
-                message: "Invalid Security Event Token format",
-                success: false
-            };
-            check caller->respond(errorResponse);
-            return;
-        }
+        // SecurityEventToken|error setPayload = payload.cloneWithType(SecurityEventToken);
+        // if setPayload is error {
+        //     log:printError("Failed to parse Security Event Token", setPayload);
+        //     WebhookResponse errorResponse = {
+        //         message: "Invalid Security Event Token format",
+        //         success: false
+        //     };
+        //     check caller->respond(errorResponse);
+        //     return;
+        // }
 
-        // Process the Security Event Token
-        error? processResult = processSecurityEventToken(setPayload);
-        if processResult is error {
-            log:printError("Failed to process Security Event Token", processResult);
-            WebhookResponse errorResponse = {
-                message: "Failed to process webhook event",
-                success: false
-            };
-            http:InternalServerError serverError = {
-                body: errorResponse
-            };
-            check caller->respond(serverError);
-            return;
-        }
+        // // Process the Security Event Token
+        // error? processResult = processSecurityEventToken(setPayload);
+        // if processResult is error {
+        //     log:printError("Failed to process Security Event Token", processResult);
+        //     WebhookResponse errorResponse = {
+        //         message: "Failed to process webhook event",
+        //         success: false
+        //     };
+        //     http:InternalServerError serverError = {
+        //         body: errorResponse
+        //     };
+        //     check caller->respond(serverError);
+        //     return;
+        // }
 
         // Send success response
         WebhookResponse successResponse = {
