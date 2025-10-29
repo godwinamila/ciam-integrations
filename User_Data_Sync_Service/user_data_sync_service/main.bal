@@ -132,7 +132,7 @@ service / on webhookListener {
         // Log the incoming event payload
         string payloadString = payload.toJsonString();
         //log:printInfo("Received webhook event payload", eventPayload = payloadString);
-        log:printInfo("############################# Received webhook event payload : " + eventPayload);
+        log:printInfo("############################# Received webhook event payload : " + payloadString);
 
         // Convert JSON to SecurityEventToken record
         SecurityEventToken|error setPayload = payload.cloneWithType(SecurityEventToken);
