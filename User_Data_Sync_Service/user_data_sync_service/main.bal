@@ -226,6 +226,7 @@ function processSecurityEventToken(SecurityEventToken setPayload) returns error?
 function processEventByType(string eventType, json eventData, SecurityEventToken setPayload) returns error? {
 
     log:printInfo("Processing event", eventType = eventType);
+    log:printInfo("###########Processing event : " + eventType);
 
     // Process registration success, user profile update, and user delete events
     if eventType.includes("registrationSuccess") {
